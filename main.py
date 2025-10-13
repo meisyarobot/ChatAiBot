@@ -3,17 +3,11 @@ CHAT AI BOT: MEISYAROBOT
 Repo: https://github.com/meisyarobot/ChatAiBot
 """
 
-import os
-import sys
-import json
-import asyncio
-import signal
-import subprocess
+import os, sys, json, asyncio, signal, subprocess
 from pyrogram import Client, filters
 from pyrogram.types import Message
 from dotenv import load_dotenv
 import importlib
-import config
 from plugins import LoadPlugins
 
 load_dotenv()
@@ -21,8 +15,6 @@ load_dotenv()
 API_ID = int(os.getenv("API_ID"))
 API_HASH = os.getenv("API_HASH")
 SESSION_STRING = os.getenv("SESSION_STRING")
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
-GROUP_TARGET = int(os.getenv("GROUP_TARGET"))
 DEV = int(os.getenv("DEV"))
 OWNER = os.getenv("OWNER", "@boyschell")
 
@@ -79,7 +71,6 @@ app.config = {"DEV": DEV, "OWNER": OWNER}
 
 def load_plugins():
     sys.path.append(os.path.abspath("."))
-
     for mod_name in LoadPlugins():
         module_path = f"plugins.{mod_name}"
         try:
