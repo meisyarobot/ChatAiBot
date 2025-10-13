@@ -27,7 +27,7 @@ BLACKLIST_FILE = "bl_id.json"
 GROUP_FILE = "group_list.json"
 
 genai.configure(api_key=GEMINI_API_KEY)
-model = genai.GenerativeModel("gemini-2.5")
+model = genai.GenerativeModel("gemini-2.0-flash-001")
 
 def load_json(path, default):
     if not os.path.exists(path):
