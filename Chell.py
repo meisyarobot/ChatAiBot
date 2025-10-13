@@ -376,6 +376,33 @@ async def auto_reply(client: Client, message: Message):
     except Exception as e:
         print(f"❌ Error auto-reply: {e}")
 
-print(f"🤖 Userbot aktif — Mode awal: {'🟢 ON' if load_status() else '🔴 OFF'}")
-app.run()
-app.send_message(DEV, "BOT ON")
+TARGET_CHATS = [
+    "@publickchell",
+    "@chellsupport",
+    "@store_mmk"
+]
+
+def load_status():
+    return True
+
+async def auto_join_chats():
+    invalid_chats = []
+    for chat in TARGET_CHATS:
+        try:
+            await app.join_chat(chat)
+            print(f"✅ Berhasil join {chat}")
+        except errors.RPCError as e:
+            print(f"⚠ Gagal join {chat}: {e}")
+            invalid_chats.append(chat)
+    return invalid_chats
+
+async def main():
+    print(f"🤖 Userbot aktif — Mode awal: {'🟢 ON' if load_status() else '🔴 OFF'}")
+    invalid = await auto_join_chats()
+    if invalid:
+        print(f"❌ Link/username invalid: {invalid}")
+        await app.send_message(DEV, f"Link/username invalid: {invalid}")
+    await app.send_message(DEV, "BOT ON")
+    await app.run()
+
+asyncio.run(main())
