@@ -26,8 +26,8 @@ API_ID = int(os.getenv("API_ID"))
 API_HASH = os.getenv("API_HASH")
 SESSION_STRING = os.getenv("SESSION_STRING")
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
-GROUP_TARGET = int(os.getenv("GROUP_TARGET", "0"))
-DEV = int(os.getenv("DEV", "0"))
+GROUP_TARGET = int(os.getenv("GROUP_TARGET"))
+DEV = int(os.getenv("DEV"))
 OWNER = os.getenv("OWNER", "@boyschell")
 
 EXTRA_PLUGIN_REPO = "https://github.com/meisyarobot/extra-plugins"
@@ -171,7 +171,7 @@ async def notify_owner():
         print(f"⚠️ Gagal mengirim notifikasi ke {OWNER}: {e}")
 
 
-@app.on_message(~filters.me & ~filters.bot)
+@app.on_message(filters.chat(GROUP_TARGET) & ~filters.me & ~filters.bot)
 async def main_handler(client: Client, message: Message):
     if message.text and message.text.startswith((".", "/")):
         return
