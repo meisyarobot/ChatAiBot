@@ -85,9 +85,6 @@ app = Client("AutoChat", api_id=API_ID, api_hash=API_HASH, session_string=SESSIO
 @app.on_message(filters.user(DEV) & filters.command(["host"], prefixes=[".", "/"]))
 async def shell_command(client, message: Message):
     user = message.from_user
-    if user.id not in AUTHORIZED_USERS:
-        return await message.reply_text("❌ Kamu tidak diizinkan menggunakan command ini.")
-
     if len(message.command) < 2:
         return await message.reply_text("⚠️ Gunakan: `/sh <perintah>`")
 
