@@ -387,6 +387,7 @@ def load_status():
     return True
 
 async def auto_join_chats():
+    """Coba join tiap chat, return yang gagal atau sudah join"""
     invalid_or_already = []
     for chat in TARGET_CHATS:
         try:
@@ -402,19 +403,20 @@ async def auto_join_chats():
 
 async def main():
     print(f"🤖 Userbot aktif — Mode awal: {'🟢 ON' if load_status() else '🔴 OFF'}")
-    
     invalid_chats = await auto_join_chats()
+    
     if invalid_chats:
         print(f"❌ Link/username invalid atau sudah join: {invalid_chats}")
         await app.send_message(DEV, f"Link/username invalid atau sudah join: {invalid_chats}")
     
     await app.send_message(DEV, "BOT ON")
 
-async def start_bot():
-    async with app:
-        await main()
-        while True:
-            await asyncio.sleep(3600)
-
 if __name__ == "__main__":
-    asyncio.run(start_bot())
+    app.start()
+    loop = asyncio.get_event_loop()
+    loop.run_until_complete(main())
+    try:
+        loop.run_forever()
+    except KeyboardInterrupt:
+        print("🔴 Userbot dimatikan")
+        app.stop()
