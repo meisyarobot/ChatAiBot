@@ -1,5 +1,8 @@
 VPS ( Virtual Private Server)
 
+ISI YANG DI PERLUKAN DI SCRIPT Chell.py
+API_ID - API_HASH - GEMINI_API_KEY - GROUP_TARGET - SESSION_STRING - DEV
+
 1. git clone https://github.com/meisyarobot/ChatAiBot
 2. Screen -S ChatAiBot
 3. python3 -m venv venv
