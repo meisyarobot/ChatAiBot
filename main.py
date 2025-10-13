@@ -101,6 +101,9 @@ if __name__ == "__main__":
     load_plugins()
     print("✅ Semua plugin dimuat. Bot sedang berjalan...")
 
+    import asyncio
+    import signal
+
     async def runner():
         await app.start()
         try:
@@ -108,7 +111,20 @@ if __name__ == "__main__":
             print(f"📩 Notifikasi dikirim ke DEV ({DEV})")
         except Exception as e:
             print(f"⚠️ Gagal mengirim notifikasi ke DEV: {e}")
-        await app.idle()
-    import asyncio
+
+        stop_event = asyncio.Event()
+
+        def _stop(*_):
+            stop_event.set()
+
+        for sig in (signal.SIGINT, signal.SIGTERM):
+            asyncio.get_event_loop().add_signal_handler(sig, _stop)
+
+        print("🕒 Bot sedang berjalan. Tekan Ctrl+C untuk berhenti.")
+        await stop_event.wait()
+
+        await app.stop()
+        print("🛑 Bot dimatikan dengan aman.")
+
     loop = asyncio.get_event_loop()
     loop.run_until_complete(runner())
