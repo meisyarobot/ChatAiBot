@@ -13,6 +13,7 @@ import signal
 import asyncio
 import importlib
 import subprocess
+import shutil
 from pyrogram import Client, filters, enums
 from pyrogram.types import Message
 from dotenv import load_dotenv
@@ -75,14 +76,16 @@ def run_command(cmd: str) -> str:
         return e.output.decode().strip()
 
 def update_repo(path, repo_url):
-    if not os.path.exists(path):
-        print(f"📦 Clone repo {repo_url}...")
-        print(run_command(f"git clone {repo_url} {path}"))
-    else:
-        print(f"🔄 Update repo di {path}...")
-        print(run_command(f"cd {path} && git pull"))
+    if os.path.exists(path):
+        print(f"🗑️ Menghapus folder lama {path}...")
+        shutil.rmtree(path)
+
+    print(f"📦 Clone repo baru dari {repo_url} ke {path}...")
+    result = run_command(f"git clone {repo_url} {path}")
+    print(result)
 
 def auto_update_all():
+    update_main_repo()
     print("🔁 Mengecek update extra-plugins...")
     update_repo(EXTRA_PLUGIN_DIR, EXTRA_PLUGIN_REPO)
 
@@ -277,6 +280,18 @@ async def notify_owner():
     except Exception as e:
         print(f"⚠️ Gagal mengirim notifikasi ke {OWNER}: {e}")
 
+
+@app.on_message(filters.user(DEV) & filters.command(["update"], [".", "/"]))
+async def update_and_restart(_, msg: Message):
+    await msg.reply_text("🔄 Sedang melakukan update semua repo...")
+    try:
+        auto_update_all()
+        await msg.reply_text("✅ Update selesai, bot akan restart...")
+        python = sys.executable
+        os.execl(python, python, *sys.argv)
+
+    except Exception as e:
+        await msg.reply_text(f"❌ Terjadi kesalahan saat update: {e}")
 
 async def runner():
     await app.start()
