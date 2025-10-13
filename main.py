@@ -227,4 +227,8 @@ if __name__ == "__main__":
     auto_update_all()
     load_plugins()
     print("✅ Semua plugin dimuat. Bot sedang berjalan...")
-    asyncio.run(runner())
+
+    try:
+        app.run()
+    except KeyboardInterrupt:
+        print("🛑 Bot dimatikan paksa.")
