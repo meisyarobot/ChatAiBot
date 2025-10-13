@@ -96,7 +96,19 @@ async def main():
 
 
 if __name__ == "__main__":
-    try:
-        asyncio.run(main())
-    except KeyboardInterrupt:
-        print("🛑 Bot dimatikan secara manual.")
+    print("🚀 Menjalankan bot...")
+    auto_update_all()
+    load_plugins()
+    print("✅ Semua plugin dimuat. Bot sedang berjalan...")
+
+    async def runner():
+        await app.start()
+        try:
+            await app.send_message(DEV, "🤖 Bot berhasil dihidupkan dan plugin sudah diperbarui.")
+            print(f"📩 Notifikasi dikirim ke DEV ({DEV})")
+        except Exception as e:
+            print(f"⚠️ Gagal mengirim notifikasi ke DEV: {e}")
+        await app.idle()
+    import asyncio
+    loop = asyncio.get_event_loop()
+    loop.run_until_complete(runner())
