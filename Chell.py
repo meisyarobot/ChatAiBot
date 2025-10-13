@@ -11,7 +11,7 @@ import json
 import subprocess
 import re
 from dotenv import load_dotenv
-from pyrogram import Client, filters, enums, errors
+from pyrogram import Client, filters, enums, errors, idle
 from pyrogram.types import Message
 import google.generativeai as genai
 import psutil
@@ -402,14 +402,12 @@ async def join_target_chats():
 
 if __name__ == "__main__":
     async def main():
+        await app.start()
         print("Bot sudah aktif, mulai join target chats...")
         await join_target_chats()
         print("Auto join selesai.")
-        await app.start()
-        print("Bot berjalan...")
         await idle()
         await app.stop()
+        print("Bot berhenti.")
 
-    from pyrogram import idle
-    import asyncio
     asyncio.run(main())
