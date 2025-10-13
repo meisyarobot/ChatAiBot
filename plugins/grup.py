@@ -1,7 +1,7 @@
 from pyrogram import filters
 from pyrogram.types import Message
 import json, os
-import app
+#import app
 
 DATA_FILE = "data.json"
 
