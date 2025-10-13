@@ -127,14 +127,23 @@ def auto_update_all():
 
 
 def load_plugins():
-    for folder in ["plugins", EXTRA_PLUGIN_DIR]:
+    """
+    Load semua plugin dari 'plugins' dan 'extra_plugins'
+    serta inject 'app' ke namespace plugin.
+    """
+    sys.path.append(os.path.abspath("."))
+
+    for folder in ["plugins", "extra_plugins"]:
         if not os.path.exists(folder):
             continue
         for filename in os.listdir(folder):
             if filename.endswith(".py"):
                 modulename = filename[:-3]
+                moduleref = f"{folder.replace('/', '.')}.{modulename}"
                 try:
-                    importlib.import_module(f"{folder.replace('/', '.')}.{modulename}")
+                    mod = importlib.import_module(moduleref)
+                    setattr(mod, "app", app)
+
                     print(f"✅ Plugin dimuat: {folder}/{filename}")
                 except Exception as e:
                     print(f"⚠️ Gagal memuat {folder}/{filename}: {e}")
