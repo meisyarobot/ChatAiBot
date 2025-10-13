@@ -379,20 +379,11 @@ async def auto_reply(client: Client, message: Message):
         print(f"❌ Error auto-reply: {e}")
 
 
-from pyrogram import Client, errors
-import logging
-
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
-
-TARGET_CHATS = ["@publickchell", "@chellsupport", "@store_mmk"]
-
-
-async def auto_join_chats():
+async def auto_join_chats(client):
     invalid_or_already = []
     for chat in TARGET_CHATS:
         try:
-            await app.join_chat(chat)
+            await client.join_chat(chat)
             logger.info(f"✅ Berhasil join {chat}")
         except errors.UserAlreadyParticipant:
             logger.info(f"ℹ️ Sudah join {chat}")
@@ -402,13 +393,20 @@ async def auto_join_chats():
             invalid_or_already.append(chat)
     return invalid_or_already
 
+
 async def main():
-    invalid_chats = await auto_join_chats()
-    if invalid_chats:
-        logger.warning(f"❌ Link/username invalid atau sudah join: {invalid_chats}")
-        await app.send_message(DEV, f"Link/username invalid atau sudah join: {invalid_chats}")
-    await app.send_message(DEV, "BOT ON")
-    logger.info("✅ Userbot siap!")
+    async with app:
+        logger.info("🔄 Userbot mulai...")
+        invalid_chats = await auto_join_chats(app)
+        
+        if invalid_chats:
+            logger.warning(f"❌ Link/username invalid atau sudah join: {invalid_chats}")
+            await app.send_message(DEV, f"Link/username invalid atau sudah join: {invalid_chats}")
+
+        await app.send_message(DEV, "BOT ON")
+        logger.info("✅ Userbot siap!")
+        while True:
+            await asyncio.sleep(3600)
 
 if __name__ == "__main__":
-    app.run(main())
+    asyncio.run(main())
