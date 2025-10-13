@@ -79,29 +79,26 @@ def run_command(cmd: str) -> str:
     except subprocess.CalledProcessError as e:
         return e.output.decode().strip()
 
-def update_main_repo():
-    print("🔄 Mengecek update repo utama...")
-    result = run_command(f"git pull")
-    print(result)
-
 def update_extra_plugins():
-    backup_dir = f"{EXTRA_PLUGIN_DIR}_backup_{datetime.now().strftime('%Y%m%d%H%M%S')}"
     if os.path.exists(EXTRA_PLUGIN_DIR):
         try:
-            print(f"📦 Backup extra_plugins ke {backup_dir}...")
-            shutil.move(EXTRA_PLUGIN_DIR, backup_dir)
+            print(f"🗑️ Menghapus folder {EXTRA_PLUGIN_DIR} lama...")
+            shutil.rmtree(EXTRA_PLUGIN_DIR)
         except Exception as e:
-            print(f"⚠️ Gagal backup: {e}")
+            print(f"⚠️ Gagal menghapus folder lama: {e}")
+            return
     try:
         print(f"📥 Clone ulang extra_plugins dari {EXTRA_PLUGIN_REPO}...")
         result = run_command(f"git clone {EXTRA_PLUGIN_REPO} {EXTRA_PLUGIN_DIR}")
         print(result)
     except Exception as e:
         print(f"❌ Clone gagal: {e}")
-        if os.path.exists(backup_dir):
-            print("♻️ Restore backup extra_plugins...")
-            shutil.move(backup_dir, EXTRA_PLUGIN_DIR)
         raise
+
+def update_main_repo():
+    print("🔄 Mengecek update repo utama...")
+    result = run_command(f"git pull")
+    print(result)
 
 def auto_update_all():
     update_main_repo()
@@ -160,38 +157,6 @@ async def toggle_ai(_, message: Message):
         status = "idup" if load_status() else "mokad"
         await message.reply_text(f"📘 Status AI sekarang: {status}")
 
-@app.on_message(filters.chat(GROUP_TARGET) & ~filters.me & ~filters.bot)
-async def reply_with_gemini(_, message: Message):
-    global ai_active
-    if not load_status():
-        return
-    user = message.from_user
-    if not user or user.is_bot:
-        return
-    if user.id in data["blacklist"]:
-        print(f"🚫 {user.first_name} diblacklist, di-skip.")
-        return
-    if data["allowed_groups"] and message.chat.id not in data["allowed_groups"]:
-        print(f"🚷 Grup {message.chat.title} belum di-whitelist.")
-        return
-    try:
-        user_text = message.text
-        if not user_text:
-            return
-        await message.reply_chat_action(enums.ChatAction.TYPING)
-        prompt = f"""
-        Balas pesan ini kayak anak muda, santai, gaul dan kekinian.
-        Maksimal 2 kalimat tanpa emoji.
-        Pesan: {user_text}
-        """
-        response = model.generate_content(prompt)
-        answer = getattr(response, "text", None) or response.candidates[0].content.parts[0].text
-        jawaban_gaul = gaya_gaul(answer)
-        await message.reply_text(jawaban_gaul, quote=True)
-        print(f"💬 [{message.from_user.first_name}] {user_text} → {jawaban_gaul}")
-    except Exception as e:
-        print(f"❌ Error: {e}")
-
 @app.on_message(filters.user(OWNER) & filters.command("update", prefixes=[".", "/"]))
 async def update_and_restart(_, msg: Message):
     await msg.reply_text("🔄 Sedang melakukan update semua repo...")
@@ -209,7 +174,7 @@ async def notify_owner():
         print(f"📩 Notifikasi dikirim ke {OWNER}")
     except Exception as e:
         print(f"⚠️ Gagal mengirim notifikasi ke {OWNER}: {e}")
-
+        
 async def runner():
     await app.start()
     await notify_owner()
