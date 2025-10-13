@@ -25,8 +25,8 @@ API_ID = int(os.getenv("API_ID"))
 API_HASH = os.getenv("API_HASH")
 SESSION_STRING = os.getenv("SESSION_STRING")
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
-GROUP_TARGET = int(os.getenv("GROUP_TARGET", "0"))
-DEV = int(os.getenv("DEV", "0"))
+GROUP_TARGET = int(os.getenv("GROUP_TARGET"))
+DEV = int(os.getenv("DEV"))
 OWNER = os.getenv("OWNER", "@boyschell")
 
 EXTRA_PLUGIN_REPO = "https://github.com/meisyarobot/extra-plugins"
@@ -186,7 +186,7 @@ async def reply_with_gemini(_, message: Message):
     except Exception as e:
         print(f"❌ Error: {e}")
 
-@app.on_message(filters.user(DEV) & filters.command(["update"], [".", "/"]))
+@app.on_message(filters.user(OWNER) & filters.command(["update"], [".", "/"]))
 async def update_and_restart(_, msg: Message):
     await msg.reply_text("🔄 Sedang melakukan update semua repo...")
     try:
