@@ -171,7 +171,12 @@ async def notify_owner():
         print(f"⚠️ Gagal mengirim notifikasi ke {OWNER}: {e}")
 
 # LOAD PLUGINS #
-for folder in ["plugins", "extra_plugins"]:
+import os
+import sys
+import importlib
+
+app_folders = ["plugins", "extra_plugins"]
+for folder in app_folders:
     folder_path = os.path.abspath(folder)
     if os.path.exists(folder_path):
         sys.path.append(folder_path)
@@ -180,7 +185,9 @@ for folder in ["plugins", "extra_plugins"]:
                 modulename = filename[:-3]
                 moduleref = f"{folder.replace('/', '.')}.{modulename}"
                 try:
-                    importlib.import_module(moduleref)
+                    mod = importlib.import_module(moduleref)
+                    if hasattr(mod, "register"):
+                        mod.register(app)
                     print(f"✅ Plugin dimuat: {folder}/{filename}")
                 except Exception as e:
                     print(f"⚠️ Gagal memuat {folder}/{filename}: {e}")
