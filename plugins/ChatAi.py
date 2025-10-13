@@ -1,7 +1,7 @@
 from pyrogram import filters, enums
 from pyrogram.types import Message
 import google.generativeai as genai
-import app
+#import app
 from config import *
 
 model = genai.GenerativeModel("gemini-2.0-flash-001")
