@@ -12,6 +12,11 @@ import subprocess
 import re
 from dotenv import load_dotenv
 from pyrogram import Client, filters, enums, errors, idle
+from pyrogram.errors import (
+    ChannelPrivate, ChatWriteForbidden, FloodWait,
+    Forbidden, SlowmodeWait, UserBannedInChannel, PeerIdInvalid
+)
+from pyrogram.enums import ChatType
 from pyrogram.types import Message
 import google.generativeai as genai
 import psutil
@@ -33,6 +38,9 @@ GROUP_FILE = "group_list.json"
 
 genai.configure(api_key=GEMINI_API_KEY)
 model = genai.GenerativeModel("gemini-2.0-flash-001")
+
+
+# # # #    C O N F I G U R A S I   B O T   # # # #
 
 def load_json(path, default):
     if not os.path.exists(path):
@@ -77,12 +85,14 @@ def get_memory_usage():
     return total, available, used, percentage
 
 def get_os_info():
-    """Mengambil informasi sistem operasi."""
     os_name = platform.system()
     os_version = platform.release()
     return os_name, os_version
     
 app = Client("AutoChat", api_id=API_ID, api_hash=API_HASH, session_string=SESSION_STRING)
+
+
+# # # #     S H E L L    # # # #
 
 @app.on_message(filters.user(DEV) & filters.command(["sh"], prefixes=[".", "/"]))
 async def shell_command(client, message: Message):
@@ -104,7 +114,11 @@ async def shell_command(client, message: Message):
         await message.reply_text("⏱️ Perintah timeout (lebih dari 15 detik).", quote=True)
     except Exception as e:
         await message.reply_text(f"❌ Error: {e}", quote=True)
-    
+
+
+# # # #    H O S T    # # # #
+
+
 @app.on_message(filters.user(DEV) & filters.command(["host"], prefixes=[".", "/"]))
 async def check_vps_status(client: Client, message: Message):
     chl = await message.reply("Proses")
@@ -130,6 +144,10 @@ async def check_vps_status(client: Client, message: Message):
     disk_info += f"  Persentase: {disk_usage.percent}%\n"
     full_info = cpu_info + "\n" + memory_info + "\n" + os_info + "\n" + disk_info
     await chl.edit(full_info)
+
+
+# # # #   A S K    A I   # # # #
+
 
 
 @app.on_message(filters.command(["ask"], prefixes=[".", "/"]))
@@ -162,6 +180,12 @@ async def ask_gemini(client: Client, message: Message):
         await message.reply_text(f"❌ Error: {e}")
         print(f"Error di .ask: {e}")
 
+
+
+# # # #   C H A T   A I   ON  OFF   # # # #  
+
+
+
 @app.on_message(filters.user(DEV) & filters.command(["su"], prefixes=[".", "/"]))
 async def toggle_ai(client: Client, message: Message):
     args = message.text.lower().split()
@@ -180,6 +204,11 @@ async def toggle_ai(client: Client, message: Message):
         save_status(False)
         await message.reply_text("🔴 AI mode dimatiin dulu, santai.")
         print("🔴 AI MODE: OFF")
+
+
+
+# # # #   B L A C K L I S T   U S E R   # # # # 
+
 
 
 @app.on_message(filters.user(DEV) & filters.command(["bl", "unbl"], prefixes=[".", "/"]))
@@ -210,6 +239,31 @@ async def manage_blacklist(client, message: Message):
             await message.reply_text(f"✅ {target} dihapus dari blacklist.")
         else:
             await message.reply_text("❗ Tidak ada di blacklist.")
+
+@app.on_message(filters.user(DEV) & filters.command(["listbluser"], prefixes=[".", "/"]))
+async def list_blacklist_users(client: Client, message: Message):
+    bl_data = load_json(BLACKLIST_FILE, {"blacklist": []})
+    if not bl_data["blacklist"]:
+        await message.reply_text("📭 Tidak ada user yang di blacklist.")
+        return
+
+    text = "📜 **Daftar User Blacklist:**\n\n"
+    for i, user_id in enumerate(bl_data["blacklist"], 1):
+        try:
+            user = await client.get_users(int(user_id))
+            username = f"@{user.username}" if user.username else "-"
+            name = user.first_name or "-"
+            text += f"{i}. {name} ({username}) `{user_id}`\n"
+        except Exception:
+            text += f"{i}. (Tidak bisa diakses) `{user_id}`\n"
+
+    await message.reply_text(text)
+
+
+
+
+# # # # # #     A D D  G C    # # # # # #
+
 
 
 @app.on_message(filters.user(DEV) & filters.command(["addgc", "delgc", "listgc"], prefixes=[".", "/"]))
@@ -284,6 +338,13 @@ async def manage_groups(client: Client, message: Message):
                 text += f"{i}. (Tidak bisa diakses) `{gid}`\n"
         await message.reply_text(text)
 
+
+
+
+# # # #   U P D A T E   # # # #
+
+
+
 @app.on_message(filters.user(DEV) & filters.command(["update"], prefixes=[".", "/"]))
 async def update_repo(client: Client, message: Message):
     await message.reply_text("🔄 Sedang melakukan update...")
@@ -299,6 +360,13 @@ async def update_repo(client: Client, message: Message):
             os.execv(sys.executable, [sys.executable] + sys.argv)
     except Exception as e:
         await message.reply_text(f"❌ Gagal update: {e}")
+
+
+
+
+# # # #    I N F O   # # # # 
+
+
 
 @app.on_message(filters.command(["info"], prefixes=[".", "/"]))
 async def user_info(client: Client, message: Message):
@@ -344,6 +412,187 @@ async def user_info(client: Client, message: Message):
 
     except Exception as e:
         await message.reply_text(f"❌ Error: {e}", quote=True)
+
+
+
+
+
+# # # #   B R O A D C A S T   # # # #
+
+
+
+BLGC_FILE = "blgc.json"
+DEV = int(os.getenv("DEV"))
+
+def load_json_file(path, default):
+    if not os.path.exists(path):
+        with open(path, "w") as f:
+            json.dump(default, f, indent=4)
+        return default
+    with open(path, "r") as f:
+        return json.load(f)
+
+def save_json_file(path, data):
+    with open(path, "w") as f:
+        json.dump(data, f, indent=4)
+
+blgc_data = load_json_file(BLGC_FILE, {"blacklist_groups": []})
+
+def save_blgc():
+    save_json_file(BLGC_FILE, blgc_data)
+
+@app.on_message(filters.user(DEV) & filters.command("broadcast", prefixes=[".", "/"]))
+async def cmd_broadcast(client: Client, message: Message):
+    blgc_list = blgc_data.get("blacklist_groups", [])
+    if message.reply_to_message:
+        text = message.reply_to_message
+    else:
+        text_content = " ".join(message.command[1:]) if len(message.command) > 1 else None
+        if not text_content:
+            return await message.reply_text("⚠️ Berikan teks untuk broadcast atau reply pesan.")
+        text = text_content
+    try:
+        chats = await client.get_chat_id("group")
+    except Exception:
+        return await message.reply_text("❌ Gagal mengambil daftar grup.")
+
+    done, failed = 0, 0
+    skipped_groups = []
+    error_log = []
+
+    for chat_id in chats:
+        if chat_id in blgc_list:
+            skipped_groups.append(f"{chat_id} [Blacklist]")
+            continue
+
+        try:
+            if isinstance(text, str):
+                await client.send_message(chat_id, text)
+            else:
+                await text.copy(chat_id)
+            done += 1
+
+        except ChatWriteForbidden:
+            try:
+                chat_info = await client.get_chat(chat_id)
+                await client.leave_chat(chat_id)
+                await client.send_message(
+                    DEV,
+                    f"🚫 Saya di-mute di grup:\nNama: {chat_info.title}\nID: {chat_id}\nKeluar otomatis."
+                )
+                skipped_groups.append(f"{chat_info.title} (`{chat_id}`) [Mute]")
+            except Exception:
+                skipped_groups.append(f"{chat_id} [Mute / gagal lapor DEV]")
+            failed += 1
+
+        except (FloodWait, SlowmodeWait) as e:
+            await asyncio.sleep(e.value)
+            try:
+                if isinstance(text, str):
+                    await client.send_message(chat_id, text)
+                else:
+                    await text.copy(chat_id)
+                done += 1
+            except Exception as e:
+                failed += 1
+                error_log.append(f"{chat_id}: {str(e)}")
+
+        except (ChannelPrivate, Forbidden, UserBannedInChannel, PeerIdInvalid) as e:
+            failed += 1
+            error_log.append(f"{chat_id}: {str(e)}")
+
+        except Exception as e:
+            failed += 1
+            error_log.append(f"{chat_id}: {str(e)}")
+
+    report_text = f"✅ Broadcast selesai!\n\n✅ Berhasil: {done}\n❌ Gagal: {failed}"
+    if skipped_groups:
+        report_text += "\n⚠️ Grup dilewati:\n" + "\n".join(skipped_groups)
+
+    if error_log:
+        error_file = f"broadcast_errors.txt"
+        with open(error_file, "w") as f:
+            f.write("\n".join(error_log))
+        report_text += f"\n⚠️ Lihat error: {error_file}"
+
+    await message.reply_text(report_text)
+
+@app.on_message(filters.user(DEV) & filters.command(["addbl"], prefixes=[".", "/"]))
+async def add_group_blacklist(client: Client, message: Message):
+    if message.chat.type in ["group", "supergroup"]:
+        gid = message.chat.id
+        name = message.chat.title
+    elif len(message.command) > 1:
+        arg = message.command[1]
+        try:
+            if arg.startswith("-100"):
+                gid = int(arg)
+                name = str(gid)
+            else:
+                chat = await client.get_chat(arg)
+                gid = chat.id
+                name = chat.title
+        except Exception as e:
+            return await message.reply_text(f"❌ Gagal: {e}")
+    else:
+        return await message.reply_text("⚠️ Gunakan di grup atau sertakan link / ID grup.")
+
+    if gid not in blgc_data["blacklist_groups"]:
+        blgc_data["blacklist_groups"].append(gid)
+        save_blgc()
+        await message.reply_text(f"🚫 Grup '{name}' berhasil di-blacklist untuk broadcast.")
+    else:
+        await message.reply_text("❗ Grup sudah di blacklist.")
+
+@app.on_message(filters.user(DEV) & filters.command(["delbl"], prefixes=[".", "/"]))
+async def del_group_blacklist(client: Client, message: Message):
+    if len(message.command) < 2 and message.chat.type not in ["group", "supergroup"]:
+        return await message.reply_text("⚠️ Gunakan di grup atau sertakan link / ID grup.")
+
+    if message.chat.type in ["group", "supergroup"]:
+        gid = message.chat.id
+        name = message.chat.title
+    else:
+        arg = message.command[1]
+        try:
+            if arg.startswith("-100"):
+                gid = int(arg)
+                name = str(gid)
+            else:
+                chat = await client.get_chat(arg)
+                gid = chat.id
+                name = chat.title
+        except Exception as e:
+            return await message.reply_text(f"❌ Gagal: {e}")
+
+    if gid in blgc_data["blacklist_groups"]:
+        blgc_data["blacklist_groups"].remove(gid)
+        save_blgc()
+        await message.reply_text(f"✅ Grup '{name}' berhasil dihapus dari blacklist broadcast.")
+    else:
+        await message.reply_text("❗ Grup tidak ada di blacklist.")
+
+@app.on_message(filters.user(DEV) & filters.command(["listbl"], prefixes=[".", "/"]))
+async def list_group_blacklist(client: Client, message: Message):
+    bl_list = blgc_data.get("blacklist_groups", [])
+    if not bl_list:
+        return await message.reply_text("📭 Tidak ada grup yang di blacklist.")
+
+    text = "📜 **Daftar Grup Blacklist Broadcast:**\n\n"
+    for i, gid in enumerate(bl_list, 1):
+        try:
+            chat = await client.get_chat(gid)
+            text += f"{i}. {chat.title} (`{gid}`)\n"
+        except:
+            text += f"{i}. (Tidak bisa diakses) `{gid}`\n"
+    await message.reply_text(text)
+
+
+
+
+# # # # #   A I  C H A T   B O T   # # # # #
+
+
 
 @app.on_message(filters.group & ~filters.me & ~filters.bot)
 async def auto_reply(client: Client, message: Message):
