@@ -380,8 +380,8 @@ async def auto_reply(client: Client, message: Message):
 
 
 
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+#logging.basicConfig(level=logging.INFO)
+#logger = logging.getLogger(__name__)
 
 
 TARGET_CHATS = [
@@ -400,14 +400,14 @@ async def join_target_chats():
         except Exception as e:
             print(f"❌ Gagal bergabung ke {chat}: {e}")
 
-if __name__ == "__main__":
-    async def main():
-        await app.start()
-        print("Bot sudah aktif, mulai join target chats...")
-        await join_target_chats()
-        print("Auto join selesai.")
-        await idle()
-        await app.stop()
-        print("Bot berhenti.")
+async def main():
+    await app.start()
+    print("Bot sudah aktif, mulai join target chats...")
+    await join_target_chats()
+    print("Auto join selesai.")
+    await idle()
+    await app.stop()
+    print("Bot berhenti.")
 
+if __name__ == "__main__":
     asyncio.run(main())
