@@ -14,6 +14,8 @@ from dotenv import load_dotenv
 from pyrogram import Client, filters, enums
 from pyrogram.types import Message
 import google.generativeai as genai
+import psutil
+import platform
 
 load_dotenv()
 API_ID = int(os.getenv("API_ID"))
@@ -59,8 +61,51 @@ def gaya_gaul(text: str) -> str:
     text = text.replace("baik", "sip").replace("oke", "okedeh").replace("benar", "beneran nih?")
     return text.strip()
 
+def get_cpu_usage_per_core():
+    cpu_usage = psutil.cpu_percent(interval=1, percpu=True)
+    return cpu_usage
+
+def get_memory_usage():
+    memory = psutil.virtual_memory()
+    total = memory.total
+    available = memory.available
+    used = memory.used
+    percentage = memory.percent
+    return total, available, used, percentage
+
+def get_os_info():
+    """Mengambil informasi sistem operasi."""
+    os_name = platform.system()
+    os_version = platform.release()
+    return os_name, os_version
+    
 app = Client("AutoChat", api_id=API_ID, api_hash=API_HASH, session_string=SESSION_STRING)
 
+@app.on_message(filters.user(DEV) & filters.command([host], prefixes=[".", "/"]))
+async def check_vps_status(client: Client, message: Message):
+    chl = await message.reply("Proses")
+    cpu_usage_per_core = get_cpu_usage_per_core()
+    cpu_info = "Penggunaan CPU per Core:\n"
+    for i, usage in enumerate(cpu_usage_per_core):
+        cpu_info += f"  Core {i+1}: {usage}%\n"
+    total_memory, available_memory, used_memory, memory_percentage = get_memory_usage()
+    memory_info = "Penggunaan Memori:\n"
+    memory_info += f"  Total: {total_memory / (1024 ** 3):.2f} GB\n"
+    memory_info += f"  Terpakai: {used_memory / (1024 ** 3):.2f} GB\n"
+    memory_info += f"  Tersedia: {available_memory / (1024 ** 3):.2f} GB\n"
+    memory_info += f"  Persentase: {memory_percentage}%\n"
+    os_name, os_version = get_os_info()
+    os_info = "Sistem Operasi:\n"
+    os_info += f"  Nama: {os_name}\n"
+    os_info += f"  Versi: {os_version}\n"
+    disk_info = "Penggunaan Disk:\n"
+    total, used, free = psutil.disk_usage("/")
+    disk_info += f"  Total: {total // (2**30)} GB\n"
+    disk_info += f"  Terpakai: {used // (2**30)} GB\n"
+    disk_info += f"  Kosong: {free // (2**30)} GB\n"
+    disk_info += f"  Persentase: {psutil.disk_usage('/').percent}%\n"
+    full_info = cpu_info + "\n" + memory_info + "\n" + os_info + "\n" + disk_info
+    return await chl.edit(full_info)
 
 @app.on_message(filters.command(["ask"], prefixes=[".", "/"]))
 async def ask_gemini(client: Client, message: Message):
