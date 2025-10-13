@@ -396,15 +396,15 @@ async def auto_join_chats(client):
 
 async def main():
     async with app:
-        logger.info("🔄 Userbot mulai...")
+        logger.info("🤖 Userbot aktif, memulai auto join chat...")
         invalid_chats = await auto_join_chats(app)
-        
         if invalid_chats:
-            logger.warning(f"❌ Link/username invalid atau sudah join: {invalid_chats}")
-            await app.send_message(DEV, f"Link/username invalid atau sudah join: {invalid_chats}")
+            msg = f"❌ Link/username invalid atau sudah join: {invalid_chats}"
+            logger.warning(msg)
+            await app.send_message(DEV, msg)
 
-        await app.send_message(DEV, "BOT ON")
-        logger.info("✅ Userbot siap!")
+        await app.send_message(DEV, "✅ Userbot ON dan auto join selesai")
+        logger.info("✅ Semua proses auto join selesai, userbot siap!")
         while True:
             await asyncio.sleep(3600)
 
