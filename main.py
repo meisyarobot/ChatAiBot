@@ -8,7 +8,6 @@ import sys
 import json
 import asyncio
 import signal
-import shutil
 import subprocess
 from pyrogram import Client
 from dotenv import load_dotenv
@@ -23,8 +22,6 @@ GROUP_TARGET = int(os.getenv("GROUP_TARGET"))
 DEV = int(os.getenv("DEV"))
 OWNER = os.getenv("OWNER", "@boyschell")
 
-EXTRA_PLUGIN_REPO = "https://github.com/meisyarobot/extra-plugins"
-EXTRA_PLUGIN_DIR = "extra_plugins"
 DATA_FILE = "data.json"
 STATUS_FILE = "status.json"
 
@@ -65,23 +62,6 @@ def update_main_repo():
     print("🔄 Mengecek update repo utama...")
     print(run_command("git pull"))
 
-#def update_extra_plugins():
-    #if os.path.exists(EXTRA_PLUGIN_DIR):
-        #shutil.rmtree(EXTRA_PLUGIN_DIR)
-    #print(f"📥 Clone ulang extra_plugins dari {EXTRA_PLUGIN_REPO}...")
-    #print(run_command(f"git clone {EXTRA_PLUGIN_REPO} {EXTRA_PLUGIN_DIR}"))
-
-def auto_update_all():
-    update_main_repo()
-    #update_extra_plugins()
-
-async def notify_owner(app):
-    try:
-        await app.send_message(OWNER, "🤖 Bot berhasil dihidupkan dan plugin sudah diperbarui.")
-        print(f"📩 Notifikasi dikirim ke {OWNER}")
-    except Exception as e:
-        print(f"⚠️ Gagal mengirim notifikasi ke {OWNER}: {e}")
-
 app = Client(
     "ChatAiBot",
     api_id=API_ID,
@@ -93,45 +73,51 @@ app.data = load_data()
 app.ai_active = load_status()
 app.config = {"DEV": DEV, "OWNER": OWNER}
 
-from pyrogram import filters
-from pyrogram.types import Message
-
-
-import os
-import sys
 import importlib
 
 def load_plugins():
     sys.path.append(os.path.abspath("."))
 
-    for folder in ["plugins", "extra_plugins"]:
-        folder_path = os.path.abspath(folder)
-        if not os.path.exists(folder_path):
-            continue
-        for filename in os.listdir(folder_path):
-            if filename.endswith(".py") and filename != "__init__.py":
-                moduleref = f"{folder}.{filename[:-3]}"
-                try:
-                    mod = importlib.import_module(moduleref)
-                    if hasattr(mod, "register") and callable(mod.register):
-                        mod.register(app)
-                        print(f"✅ Plugin dimuat: {folder}/{filename}")
-                    else:
-                        print(f"⚠️ Plugin {folder}/{filename} tidak memiliki fungsi register(), dilewati")
-                except Exception as e:
-                    print(f"❌ Gagal memuat {folder}/{filename}: {e}")
+    folder = "plugins"
+    folder_path = os.path.abspath(folder)
+    if not os.path.exists(folder_path):
+        print(f"⚠️ Folder {folder} tidak ditemukan, dilewati")
+        return
 
+    for filename in os.listdir(folder_path):
+        if filename.endswith(".py") and filename != "__init__.py":
+            moduleref = f"{folder}.{filename[:-3]}"
+            try:
+                mod = importlib.import_module(moduleref)
+                if hasattr(mod, "register") and callable(mod.register):
+                    mod.register(app)
+                    print(f"✅ Plugin dimuat: {folder}/{filename}")
+                else:
+                    print(f"⚠️ Plugin {folder}/{filename} tidak memiliki fungsi register(), dilewati")
+            except Exception as e:
+                print(f"❌ Gagal memuat {folder}/{filename}: {e}")
+
+from pyrogram import filters
+from pyrogram.types import Message
 
 @app.on_message(filters.user(OWNER) & filters.command("update", prefixes=[".", "/"]))
 async def update_and_restart(_, msg: Message):
-    await msg.reply_text("🔄 Sedang melakukan update semua repo...")
+    await msg.reply_text("🔄 Sedang melakukan update repo utama...")
     try:
-        auto_update_all()
+        update_main_repo()
         await msg.reply_text("✅ Update selesai, bot akan restart...")
         python = sys.executable
         os.execl(python, python, *sys.argv)
     except Exception as e:
         await msg.reply_text(f"❌ Terjadi kesalahan saat update: {e}")
+
+
+async def notify_owner(app):
+    try:
+        await app.send_message(OWNER, "🤖 Bot berhasil dihidupkan dan plugin sudah diperbarui.")
+        print(f"📩 Notifikasi dikirim ke {OWNER}")
+    except Exception as e:
+        print(f"⚠️ Gagal mengirim notifikasi ke {OWNER}: {e}")
 
 
 async def runner():
@@ -148,9 +134,12 @@ async def runner():
     await app.stop()
     print("🛑 Bot dimatikan dengan aman.")
 
+
 if __name__ == "__main__":
     print("🚀 Menjalankan bot...")
-    #auto_update_all()
+    load_plugins()
+    print("✅ Semua plugin dimuat. Bot sedang berjalan...")
+
     try:
         app.run()
     except KeyboardInterrupt:
