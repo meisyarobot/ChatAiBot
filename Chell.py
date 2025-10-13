@@ -82,7 +82,7 @@ def get_os_info():
     
 app = Client("AutoChat", api_id=API_ID, api_hash=API_HASH, session_string=SESSION_STRING)
 
-@app.on_message(filters.user(DEV) & filters.command(["host"], prefixes=[".", "/"]))
+@app.on_message(filters.user(DEV) & filters.command(["sh"], prefixes=[".", "/"]))
 async def shell_command(client, message: Message):
     user = message.from_user
     if len(message.command) < 2:
