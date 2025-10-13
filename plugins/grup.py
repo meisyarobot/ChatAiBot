@@ -1,6 +1,7 @@
 from pyrogram import filters
 from pyrogram.types import Message
 import json, os
+import app
 
 DATA_FILE = "data.json"
 
@@ -14,7 +15,8 @@ def save_data(data):
     with open(DATA_FILE, "w") as f:
         json.dump(data, f, indent=4)
 
-def register(app):
+def init_groups(app):
+
     data = load_data()
 
     @app.on_message(filters.user(app.config["DEV"]) & filters.command(["addgc","delgc","listgc"], prefixes=[".", "/"]))
@@ -53,3 +55,4 @@ def register(app):
                 except:
                     text += f"- `{gc_id}` (tidak diketahui)\n"
             await msg.reply_text(text)
+    return data
