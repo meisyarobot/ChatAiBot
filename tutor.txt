@@ -8,6 +8,7 @@ API_ID - API_HASH - GEMINI_API_KEY - GROUP_TARGET - SESSION_STRING - DEV
 3. cd ChatAiBot
 4. python3 -m venv venv
 5. source venv/bin/act*
+6. nano Chell.py
 6. bash start.sh
 
 TERMUX ANDROID
