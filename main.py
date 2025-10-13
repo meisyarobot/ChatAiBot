@@ -79,21 +79,31 @@ async def start_message(_, msg):
         await msg.reply("🤖 Bot aktif!")
 
 
-async def main():
-    print("🚀 Menjalankan bot...")
-    auto_update_all()
-    load_plugins()
-    print("✅ Semua plugin dimuat. Bot sedang berjalan...")
-
-    await app.start()
-
+async def notify_owner():
     try:
-        await app.send_message(DEV, "🤖 Bot berhasil dihidupkan dan plugin sudah diperbarui.")
-        print(f"📩 Notifikasi dikirim ke DEV ({DEV})")
+        await app.send_message(OWNER, "🤖 Bot berhasil dihidupkan dan plugin sudah diperbarui.")
+        print(f"📩 Notifikasi dikirim ke {OWNER}")
     except Exception as e:
-        print(f"⚠️ Gagal mengirim notifikasi ke DEV: {e}")
+        print(f"⚠️ Gagal mengirim notifikasi ke {OWNER}: {e}")
 
-    await app.idle()
+
+async def runner():
+    await app.start()
+    await notify_owner()
+
+    stop_event = asyncio.Event()
+
+    def _stop(*_):
+        stop_event.set()
+
+    for sig in (signal.SIGINT, signal.SIGTERM):
+        asyncio.get_event_loop().add_signal_handler(sig, _stop)
+
+    print("🕒 Bot sedang berjalan. Tekan Ctrl+C untuk berhenti.")
+    await stop_event.wait()
+
+    await app.stop()
+    print("🛑 Bot dimatikan dengan aman.")
 
 
 if __name__ == "__main__":
@@ -101,31 +111,6 @@ if __name__ == "__main__":
     auto_update_all()
     load_plugins()
     print("✅ Semua plugin dimuat. Bot sedang berjalan...")
-
-    import asyncio
-    import signal
-
-    async def runner():
-        await app.start()
-        try:
-            await app.send_message(DEV, "🤖 Bot berhasil dihidupkan dan plugin sudah diperbarui.")
-            print(f"📩 Notifikasi dikirim ke DEV ({DEV})")
-        except Exception as e:
-            print(f"⚠️ Gagal mengirim notifikasi ke DEV: {e}")
-
-        stop_event = asyncio.Event()
-
-        def _stop(*_):
-            stop_event.set()
-
-        for sig in (signal.SIGINT, signal.SIGTERM):
-            asyncio.get_event_loop().add_signal_handler(sig, _stop)
-
-        print("🕒 Bot sedang berjalan. Tekan Ctrl+C untuk berhenti.")
-        await stop_event.wait()
-
-        await app.stop()
-        print("🛑 Bot dimatikan dengan aman.")
 
     loop = asyncio.get_event_loop()
     loop.run_until_complete(runner())
