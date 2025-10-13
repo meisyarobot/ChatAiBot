@@ -14,7 +14,7 @@ from pyrogram.types import Message
 from dotenv import load_dotenv
 import importlib
 import config
-from ChatAiBot.plugins import LoadPlugins
+from plugins import LoadPlugins
 
 load_dotenv()
 
