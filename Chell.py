@@ -405,6 +405,4 @@ if __name__ == "__main__":
         print("Bot sudah aktif, mulai join target chats...")
         await join_target_chats()
         print("Auto join selesai.")
-    app.startup_handlers.append(on_startup)
-
-    app.run()
+    app.run(on_startup=on_startup)
