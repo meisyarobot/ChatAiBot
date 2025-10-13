@@ -7,13 +7,12 @@ Yang ganti atau hapus kredit pantatnya bisulan tujuh turunan.
 
 import os
 import sys
-import re
 import json
 import signal
 import asyncio
 import importlib
-import subprocess
 import shutil
+import subprocess
 from datetime import datetime
 from pyrogram import Client, filters, enums
 from pyrogram.types import Message
@@ -21,12 +20,13 @@ from dotenv import load_dotenv
 import google.generativeai as genai
 
 load_dotenv()
+
 API_ID = int(os.getenv("API_ID"))
 API_HASH = os.getenv("API_HASH")
 SESSION_STRING = os.getenv("SESSION_STRING")
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
-GROUP_TARGET = int(os.getenv("GROUP_TARGET"))
-DEV = int(os.getenv("DEV"))
+GROUP_TARGET = int(os.getenv("GROUP_TARGET", "0"))
+DEV = int(os.getenv("DEV", "0"))
 OWNER = os.getenv("OWNER", "@boyschell")
 
 EXTRA_PLUGIN_REPO = "https://github.com/meisyarobot/extra-plugins"
@@ -67,17 +67,22 @@ def load_data():
 def save_data(data):
     save_json(DATA_FILE, data)
 
-app = Client("ChatAiBot", api_id=API_ID, api_hash=API_HASH, session_string=SESSION_STRING)
-
-
-ai_active = load_status()
-data = load_data()
-
 def run_command(cmd: str) -> str:
     try:
         return subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT).decode().strip()
     except subprocess.CalledProcessError as e:
         return e.output.decode().strip()
+
+
+app = Client("ChatAiBot", api_id=API_ID, api_hash=API_HASH, session_string=SESSION_STRING)
+ai_active = load_status()
+data = load_data()
+
+
+def update_main_repo():
+    print("🔄 Mengecek update repo utama...")
+    result = run_command("git pull")
+    print(result)
 
 def update_extra_plugins():
     if os.path.exists(EXTRA_PLUGIN_DIR):
@@ -95,21 +100,12 @@ def update_extra_plugins():
         print(f"❌ Clone gagal: {e}")
         raise
 
-def update_main_repo():
-    print("🔄 Mengecek update repo utama...")
-    result = run_command(f"git pull")
-    print(result)
-
 def auto_update_all():
     update_main_repo()
     update_extra_plugins()
 
 def load_plugins():
-    import importlib
-    import os
-    import sys
     sys.path.append(os.path.abspath("."))
-
     for folder in ["plugins", "extra_plugins"]:
         if not os.path.exists(folder):
             continue
@@ -124,8 +120,6 @@ def load_plugins():
                     print(f"✅ Plugin dimuat: {folder}/{filename}")
                 except Exception as e:
                     print(f"⚠️ Gagal memuat {folder}/{filename}: {e}")
-
-
 
 def gaya_gaul(text: str) -> str:
     text = text.replace("saya", "gue").replace("aku", "gue").replace("kamu", "lu")
@@ -175,17 +169,22 @@ async def notify_owner():
     except Exception as e:
         print(f"⚠️ Gagal mengirim notifikasi ke {OWNER}: {e}")
 
-@app.on_message(filters.chat(GROUP_TARGET) & ~filters.me & ~filters.bot)
-async def reply_with_gemini(_, message: Message):
-    global ai_active
+
+@app.on_message(~filters.me & ~filters.bot)
+async def main_handler(client: Client, message: Message):
+    if message.text and message.text.startswith((".", "/")):
+        return
     if not load_status():
         return
+
     user = message.from_user
     if not user or user.is_bot:
         return
+        
     if user.id in data["blacklist"]:
         print(f"🚫 {user.first_name} diblacklist, di-skip.")
         return
+
     if data["allowed_groups"] and message.chat.id not in data["allowed_groups"]:
         print(f"🚷 Grup {message.chat.title} belum di-whitelist.")
         return
@@ -193,17 +192,20 @@ async def reply_with_gemini(_, message: Message):
         user_text = message.text
         if not user_text:
             return
+
         await message.reply_chat_action(enums.ChatAction.TYPING)
+
         prompt = f"""
         Balas pesan ini kayak anak muda, santai, gaul dan kekinian.
-        Maksimal 2 kalimat tanpa emoji. dan jangan memperlihatkan bahwa pesan dari ai. buatlah semanusiawi dan logika atau bercanda sebagaimana manusia berbicara.
-        Pesan:{user_text}
+        Maksimal 2 kalimat tanpa emoji. Jangan tunjukkan kalau AI. Bercanda atau logika seperti manusia.
+        Pesan: {user_text}
         """
+
         response = model.generate_content(prompt)
         answer = getattr(response, "text", None) or response.candidates[0].content.parts[0].text
         jawaban_gaul = gaya_gaul(answer)
         await message.reply_text(jawaban_gaul, quote=True)
-        print(f"💬 [{message.from_user.first_name}] {user_text} → {jawaban_gaul}")
+        print(f"💬 [{user.first_name}] {user_text} → {jawaban_gaul}")
     except Exception as e:
         print(f"❌ Error: {e}")
 
@@ -224,6 +226,4 @@ if __name__ == "__main__":
     auto_update_all()
     load_plugins()
     print("✅ Semua plugin dimuat. Bot sedang berjalan...")
-
-    loop = asyncio.get_event_loop()
-    loop.run_until_complete(runner())
+    asyncio.run(runner())
