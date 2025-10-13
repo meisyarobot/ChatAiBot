@@ -36,7 +36,7 @@ STATUS_FILE = "status.json"
 
 
 genai.configure(api_key=GEMINI_API_KEY)
-model = genai.GenerativeModel("gemini-2.5")
+model = genai.GenerativeModel("gemini-2.0-flash-001")
 
 
 def save_json(path, data):
