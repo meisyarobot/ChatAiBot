@@ -83,30 +83,28 @@ def get_os_info():
 app = Client("AutoChat", api_id=API_ID, api_hash=API_HASH, session_string=SESSION_STRING)
 
 @app.on_message(filters.user(DEV) & filters.command(["host"], prefixes=[".", "/"]))
-async def check_vps_status(client: Client, message: Message):
-    chl = await message.reply("Proses")
-    cpu_usage_per_core = get_cpu_usage_per_core()
-    cpu_info = "Penggunaan CPU per Core:\n"
-    for i, usage in enumerate(cpu_usage_per_core):
-        cpu_info += f"  Core {i+1}: {usage}%\n"
-    total_memory, available_memory, used_memory, memory_percentage = get_memory_usage()
-    memory_info = "Penggunaan Memori:\n"
-    memory_info += f"  Total: {total_memory / (1024 ** 3):.2f} GB\n"
-    memory_info += f"  Terpakai: {used_memory / (1024 ** 3):.2f} GB\n"
-    memory_info += f"  Tersedia: {available_memory / (1024 ** 3):.2f} GB\n"
-    memory_info += f"  Persentase: {memory_percentage}%\n"
-    os_name, os_version = get_os_info()
-    os_info = "Sistem Operasi:\n"
-    os_info += f"  Nama: {os_name}\n"
-    os_info += f"  Versi: {os_version}\n"
-    disk_info = "Penggunaan Disk:\n"
-    total, used, free = psutil.disk_usage("/")
-    disk_info += f"  Total: {total // (2**30)} GB\n"
-    disk_info += f"  Terpakai: {used // (2**30)} GB\n"
-    disk_info += f"  Kosong: {free // (2**30)} GB\n"
-    disk_info += f"  Persentase: {psutil.disk_usage('/').percent}%\n"
-    full_info = cpu_info + "\n" + memory_info + "\n" + os_info + "\n" + disk_info
-    return await chl.edit(full_info)
+async def shell_command(client, message: Message):
+    user = message.from_user
+    if user.id not in AUTHORIZED_USERS:
+        return await message.reply_text("❌ Kamu tidak diizinkan menggunakan command ini.")
+
+    if len(message.command) < 2:
+        return await message.reply_text("⚠️ Gunakan: `/sh <perintah>`")
+
+    cmd_text = " ".join(message.command[1:])
+    try:
+        cmd_list = shlex.split(cmd_text)
+        result = subprocess.run(cmd_list, capture_output=True, text=True, shell=False, timeout=15)
+        output = result.stdout.strip() or result.stderr.strip()
+        if not output:
+            output = "✅ Perintah dijalankan, tapi tidak ada output."
+        if len(output) > 4000:
+            output = output[:4000] + "\n\n...output terpotong..."
+        await message.reply_text(f"💻 Perintah: `{cmd_text}`\n\n📥 Output:\n{output}", quote=True)
+    except subprocess.TimeoutExpired:
+        await message.reply_text("⏱️ Perintah timeout (lebih dari 15 detik).", quote=True)
+    except Exception as e:
+        await message.reply_text(f"❌ Error: {e}", quote=True)
     
 @app.on_message(filters.user(DEV) & filters.command(["host"], prefixes=[".", "/"]))
 async def check_vps_status(client: Client, message: Message):
@@ -125,7 +123,7 @@ async def check_vps_status(client: Client, message: Message):
     os_info = "Sistem Operasi:\n"
     os_info += f"  Nama: {os_name}\n"
     os_info += f"  Versi: {os_version}\n"
-    disk_usage = psutil.disk_usage("/")
+    disk_usage = psutil.disk_usage("/") 
     disk_info = "Penggunaan Disk:\n"
     disk_info += f"  Total: {disk_usage.total // (2**30)} GB\n"
     disk_info += f"  Terpakai: {disk_usage.used // (2**30)} GB\n"
