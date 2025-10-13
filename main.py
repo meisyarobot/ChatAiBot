@@ -19,7 +19,6 @@ from pyrogram.types import Message
 from dotenv import load_dotenv
 import google.generativeai as genai
 
-# === ENV ===
 load_dotenv()
 
 API_ID = int(os.getenv("API_ID"))
@@ -44,8 +43,13 @@ app = Client("ChatAiBot", api_id=API_ID, api_hash=API_HASH, session_string=SESSI
 def load_json(path, default=None):
     if not os.path.exists(path):
         save_json(path, default or {})
-    with open(path, "r") as f:
-        return json.load(f)
+    try:
+        with open(path, "r") as f:
+            return json.load(f)
+    except json.JSONDecodeError:
+        print(f"⚠️ File {path} rusak, membuat ulang dengan default.")
+        save_json(path, default or {})
+        return default or {}
 
 def save_json(path, data):
     with open(path, "w") as f:
