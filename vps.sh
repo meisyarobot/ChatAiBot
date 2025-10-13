@@ -8,7 +8,7 @@ BOT_NAME="AutoChatBot"
 PYTHON_VERSION="python3"
 VENV_DIR="venv"
 REQUIREMENTS="requirements.txt"
-MAIN_FILE="main.py"
+MAIN_FILE="Chell.py"
 SCREEN_NAME="autochat"
 VENV_ACTIVATE="$VENV_DIR/bin/activate"
 
