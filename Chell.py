@@ -283,8 +283,8 @@ async def user_info(client: Client, message: Message):
 
             await message.reply_text(text, quote=True)
 
-        except Exception as e:
-            await message.reply_text(f"❌ Error: {e}")
+    except Exception as e:
+        await message.reply_text(f"❌ Error: {e}")
 
 @app.on_message(filters.group & ~filters.me & ~filters.bot)
 async def auto_reply(client: Client, message: Message):
