@@ -1,3 +1,11 @@
+"""
+CHAT AI BOT: MEISYAROBOT (https://github.com/Meisyarobot/ChatAiBot)
+_____: https://t.me/boyschell
+_____: https://t.me/memekcode
+yang ganti atau hapus kredit pantat nya bisulan tuju turunan
+"""
+
+
 import json
 from pyrogram import Client, filters, enums
 from pyrogram.types import Message
