@@ -636,8 +636,7 @@ async def auto_reply(client: Client, message: Message):
 TARGET_CHATS = [
     "@publickchell",
     "@chellsupport",
-    "@store_mmk",
-    "@invalidusername"
+    "@store_mmk"
 ]
 
 
