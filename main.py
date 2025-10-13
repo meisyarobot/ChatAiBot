@@ -1,11 +1,17 @@
+"""
+CHAT AI BOT: MEISYAROBOT (https://github.com/Meisyarobot/ChatAiBot)
+_____: https://t.me/boyschell
+_____: https://t.me/memekcode
+Yang ganti atau hapus kredit pantatnya bisulan tujuh turunan.
+"""
+
 import os
 import sys
 import importlib
 import subprocess
 from pyrogram import Client, filters
 from dotenv import load_dotenv
-import time
-import json
+import asyncio
 
 load_dotenv()
 
@@ -15,11 +21,12 @@ SESSION_STRING = os.getenv("SESSION_STRING")
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 GROUP_TARGET = int(os.getenv("GROUP_TARGET"))
 DEV = int(os.getenv("DEV"))
+
 EXTRA_PLUGIN_REPO = "https://github.com/meisyarobot/extra-plugins"
 EXTRA_PLUGIN_DIR = "extra_plugins"
 
 app = Client(
-    "my_bot",
+    "ChatAiBot",
     api_id=API_ID,
     api_hash=API_HASH,
     session_string=SESSION_STRING
@@ -32,6 +39,7 @@ def run_command(cmd):
     except subprocess.CalledProcessError as e:
         return e.output.decode().strip()
 
+
 def update_repo(path, repo_url):
     if not os.path.exists(path):
         print(f"📦 Clone repo {repo_url}...")
@@ -40,17 +48,12 @@ def update_repo(path, repo_url):
         print(f"🔄 Update repo di {path}...")
         print(run_command(f"cd {path} && git pull"))
 
-def restart_bot():
-    print("♻️ Restarting bot...")
-    os.execv(sys.executable, ['python3'] + sys.argv)
 
 def auto_update_all():
-    """Auto update repositori utama (DEV only) dan extra-plugins"""
-    if os.geteuid() == 0 or True:
-        print("🔁 Mengecek update extra-plugins...")
-        update_repo(EXTRA_PLUGIN_DIR, EXTRA_PLUGIN_REPO)
-    else:
-        print("⛔ Tidak ada izin untuk update repo utama.")
+    """Auto update repositori utama dan extra-plugins"""
+    print("🔁 Mengecek update extra-plugins...")
+    update_repo(EXTRA_PLUGIN_DIR, EXTRA_PLUGIN_REPO)
+
 
 def load_plugins():
     """Muat semua plugin dari folder 'plugins' dan 'extra_plugins'"""
@@ -66,6 +69,7 @@ def load_plugins():
                 except Exception as e:
                     print(f"⚠️ Gagal memuat {folder}/{filename}: {e}")
 
+
 @app.on_message(filters.command(["start", "alive"], [".", "/"]))
 async def start_message(_, msg):
     if msg.from_user.id == DEV:
@@ -74,15 +78,25 @@ async def start_message(_, msg):
         await msg.reply("🤖 Bot aktif!")
 
 
-if __name__ == "__main__":
+async def main():
     print("🚀 Menjalankan bot...")
     auto_update_all()
     load_plugins()
     print("✅ Semua plugin dimuat. Bot sedang berjalan...")
 
+    await app.start()
+
     try:
-        app.start()
-        app.send_message(DEV, "🤖 Bot berhasil dihidupkan dan plugin sudah diperbarui.")
-        app.idle()
+        await app.send_message(DEV, "🤖 Bot berhasil dihidupkan dan plugin sudah diperbarui.")
+        print(f"📩 Notifikasi dikirim ke DEV ({DEV})")
     except Exception as e:
-        print(f"❌ Error saat menjalankan bot: {e}")
+        print(f"⚠️ Gagal mengirim notifikasi ke DEV: {e}")
+
+    await app.idle()
+
+
+if __name__ == "__main__":
+    try:
+        asyncio.run(main())
+    except KeyboardInterrupt:
+        print("🛑 Bot dimatikan secara manual.")
