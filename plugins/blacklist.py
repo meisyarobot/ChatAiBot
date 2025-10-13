@@ -1,7 +1,6 @@
 from pyrogram import filters
 from pyrogram.types import Message
 import json, os
-#import app
 
 DATA_FILE = "data.json"
 
@@ -15,8 +14,7 @@ def save_data(data):
     with open(DATA_FILE, "w") as f:
         json.dump(data, f, indent=4)
 
-def init_blacklist(app):
-
+def init(app):
     data = load_data()
 
     @app.on_message(filters.user(app.config["DEV"]) & filters.command(["addbl","delbl","listbl"], prefixes=[".", "/"]))
@@ -71,4 +69,3 @@ def init_blacklist(app):
                 except:
                     text += f"- `{uid}` (tidak diketahui)\n"
             await msg.reply_text(text, disable_web_page_preview=True)
-    return data
