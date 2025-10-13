@@ -400,14 +400,11 @@ async def join_target_chats():
         except Exception as e:
             print(f"❌ Gagal bergabung ke {chat}: {e}")
 
-async def main():
-    await app.start()
-    print("Bot sudah aktif!")
-    await join_target_chats()
-
-    print("Bot siap menerima pesan.")
-    await app.idle()
-    await app.stop()
-
 if __name__ == "__main__":
-    asyncio.run(main())
+    async def on_startup():
+        print("Bot sudah aktif, mulai join target chats...")
+        await join_target_chats()
+        print("Auto join selesai.")
+    app.startup_handlers.append(on_startup)
+
+    app.run()
