@@ -2,114 +2,276 @@
 CHAT AI BOT: MEISYAROBOT (https://github.com/Meisyarobot/ChatAiBot)
 _____: https://t.me/boyschell
 _____: https://t.me/memekcode
-yang ganti atau hapus kredit pantat nya bisulan tuju turunan
+yang ganti atau hapus kredit pantat nya bisulan tujuh turunan
 """
 
-
+import os
+import sys
 import json
+import subprocess
+import re
+from dotenv import load_dotenv
 from pyrogram import Client, filters, enums
 from pyrogram.types import Message
 import google.generativeai as genai
-import os
-import re
 
-API_ID = #ISI TANPA KUTIP
-API_HASH = "" #ISI DI DALAM KUTIP
-SESSION_STRING = "" #ISI DI DALAM KUTIP (Ambil session di @MissKatyBot atau t.me/MissKatyBot) [USER]
-GEMINI_API_KEY = "" #ISI DI DALAM KUTIP
-GROUP_TARGET =  -100 #ISI TANPA KUTIP (ID harus di awali dengan -100) GRUP YANG BISA DI AKSES BOT
+load_dotenv()
+API_ID = int(os.getenv("API_ID"))
+API_HASH = os.getenv("API_HASH")
+SESSION_STRING = os.getenv("SESSION_STRING")
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+DEV = int(os.getenv("DEV"))
 
-DEV = #ISI TANPA KUTIP
+STATUS_FILE = "ai_status.json"
+BLACKLIST_FILE = "bl_id.json"
+GROUP_FILE = "group_list.json"
 
 genai.configure(api_key=GEMINI_API_KEY)
 model = genai.GenerativeModel("gemini-2.5")
 
-STATUS_FILE = "ai_status.json"
+def load_json(path, default):
+    if not os.path.exists(path):
+        save_json(path, default)
+        return default
+    with open(path, "r") as f:
+        return json.load(f)
 
+def save_json(path, data):
+    with open(path, "w") as f:
+        json.dump(data, f, indent=4)
 
-def load_status():
-    """Baca status dari JSON."""
-    if not os.path.exists(STATUS_FILE):
-        save_status(True)
-    with open(STATUS_FILE, "r") as f:
-        data = json.load(f)
-    return data.get("ai_active", True)
-
+ai_status = load_json(STATUS_FILE, {"ai_active": True})
+blacklist = load_json(BLACKLIST_FILE, {"blacklist": []})
+group_data = load_json(GROUP_FILE, {"groups": []})
 
 def save_status(value: bool):
-    """Simpan status ke JSON."""
-    with open(STATUS_FILE, "w") as f:
-        json.dump({"ai_active": value}, f, indent=4)
+    ai_status["ai_active"] = value
+    save_json(STATUS_FILE, ai_status)
 
-ai_active = load_status()
+def load_status() -> bool:
+    return ai_status.get("ai_active", True)
+
 
 def gaya_gaul(text: str) -> str:
-    """Ubah bahasa ke gaya gaul santai."""
     text = text.replace("saya", "gue").replace("aku", "gue").replace("kamu", "lu")
     text = text.replace("tidak", "nggak").replace("iya", "ya").replace("terima kasih", "makasih")
     text = text.replace("sangat", "banget").replace("sekali", "abis")
     text = text.replace("baik", "sip").replace("oke", "okedeh").replace("benar", "beneran nih?")
     return text.strip()
 
-
 app = Client("AutoChat", api_id=API_ID, api_hash=API_HASH, session_string=SESSION_STRING)
 
 
-@app.on_message(filters.user(DEV) & filters.regex(r"^\.su", re.IGNORECASE))
+@app.on_start()
+async def notify_dev_on_start():
+    try:
+        await app.send_message(DEV, "✅ Bot sudah aktif dan siap ngebacot 😎")
+        print("📩 Notifikasi dikirim ke DEV.")
+    except Exception as e:
+        print(f"⚠️ Gagal kirim pesan ke DEV: {e}")
+
+@app.on_message(filters.command(["ask"], prefixes=[".", "/"]))
+async def ask_gemini(client: Client, message: Message):
+    try:
+        if str(message.chat.id) in blacklist["blacklist"]:
+            return
+
+        question = message.text.split(" ", 1)
+        if len(question) < 2:
+            await message.reply_text("❓ Contoh: `.ask kenapa langit berwarna biru?`")
+            return
+
+        prompt = question[1]
+        await message.reply_chat_action(enums.ChatAction.TYPING)
+
+        response = model.generate_content(prompt)
+        answer = getattr(response, "text", None)
+        if not answer and hasattr(response, "candidates"):
+            answer = response.candidates[0].content.parts[0].text
+
+        if not answer:
+            await message.reply_text("❌ Tidak ada jawaban dari AI.")
+            return
+
+        for part in [answer[i:i + 4000] for i in range(0, len(answer), 4000)]:
+            await message.reply_text(part, quote=True)
+
+        print(f"🧠 ASK by {message.from_user.first_name}: {prompt[:40]}...")
+
+    except Exception as e:
+        await message.reply_text(f"❌ Error: {e}")
+        print(f"Error di .ask: {e}")
+
+@app.on_message(filters.user(DEV) & filters.command(["su"], prefixes=[".", "/"]))
 async def toggle_ai(client: Client, message: Message):
-    global ai_active
-    text = message.text.lower().strip()
+    args = message.text.lower().split()
 
-    if text == ".su on":
-        ai_active = True
+    if len(args) == 1:
+        status = "🟢 hidup" if load_status() else "🔴 mati"
+        await message.reply_text(f"Status AI sekarang: {status}")
+        return
+
+    cmd = args[1]
+    if cmd == "on":
         save_status(True)
-        await message.reply_text("oke bro gw on lagi")
+        await message.reply_text("🟢 AI mode aktif lagi, bro!")
         print("🟢 AI MODE: ON")
-
-    elif text == ".su off":
-        ai_active = False
+    elif cmd == "off":
         save_status(False)
-        await message.reply_text("oke bro gw mati")
+        await message.reply_text("🔴 AI mode dimatiin dulu, santai.")
         print("🔴 AI MODE: OFF")
 
-    elif text == ".su":
-        ai_active = load_status()
-        status = "idup" if ai_active else "mokad"
-        await message.reply_text(f"Status AI sekarang: {status}")
-        print(f"📘 Status diminta: {status}")
+
+@app.on_message(filters.user(DEV) & filters.command(["bl", "unbl"], prefixes=[".", "/"]))
+async def manage_blacklist(client, message: Message):
+    cmd = message.command[0]
+    target = None
+
+    if message.reply_to_message:
+        target = str(message.reply_to_message.from_user.id)
+    elif len(message.command) > 1:
+        target = message.command[1]
+
+    if not target:
+        await message.reply_text("⚠️ Harap reply pesan atau masukkan ID/username.")
+        return
+
+    if cmd == "bl":
+        if target not in blacklist["blacklist"]:
+            blacklist["blacklist"].append(target)
+            save_json(BLACKLIST_FILE, blacklist)
+            await message.reply_text(f"🚫 {target} masuk daftar blacklist.")
+        else:
+            await message.reply_text("❗ Sudah di blacklist.")
+    elif cmd == "unbl":
+        if target in blacklist["blacklist"]:
+            blacklist["blacklist"].remove(target)
+            save_json(BLACKLIST_FILE, blacklist)
+            await message.reply_text(f"✅ {target} dihapus dari blacklist.")
+        else:
+            await message.reply_text("❗ Tidak ada di blacklist.")
 
 
-@app.on_message(filters.chat(GROUP_TARGET) & ~filters.me & ~filters.bot)
-async def reply_with_gemini(client: Client, message: Message):
-    global ai_active
+@app.on_message(filters.user(DEV) & filters.command(["addgc", "delgc", "listgc"], prefixes=[".", "/"]))
+async def manage_groups(client: Client, message: Message):
+    cmd = message.command[0]
+    groups = group_data["groups"]
 
-    if not load_status(): 
+    if cmd == "addgc":
+        if message.chat.type in ["group", "supergroup"]:
+            gc_id = message.chat.id
+            gc_name = message.chat.title
+        elif len(message.command) > 1:
+            arg = message.command[1]
+            try:
+                if arg.startswith("-100"):
+                    gc_id = int(arg)
+                    gc_name = str(gc_id)
+                else:
+                    gc = await client.get_chat(arg)
+                    gc_id = gc.id
+                    gc_name = gc.title
+            except Exception as e:
+                await message.reply_text(f"❌ Gagal menambahkan grup: {e}")
+                return
+        else:
+            await message.reply_text("⚠️ Gunakan `.addgc @username` atau jalankan di grup.")
+            return
+
+        if gc_id not in groups:
+            groups.append(gc_id)
+            save_json(GROUP_FILE, {"groups": groups})
+            await message.reply_text(f"✅ Grup '{gc_name}' berhasil ditambahkan.")
+        else:
+            await message.reply_text("❗ Grup ini sudah ada di daftar.")
+
+    elif cmd == "delgc":
+        if message.chat.type in ["group", "supergroup"]:
+            gc_id = message.chat.id
+        elif len(message.command) > 1:
+            gc_id = message.command[1]
+        else:
+            await message.reply_text("⚠️ Gunakan `.delgc @username` atau jalankan di grup.")
+            return
+
+        try:
+            gc_id = int(gc_id)
+        except:
+            try:
+                gc = await client.get_chat(gc_id)
+                gc_id = gc.id
+            except Exception as e:
+                await message.reply_text(f"❌ Error: {e}")
+                return
+
+        if gc_id in groups:
+            groups.remove(gc_id)
+            save_json(GROUP_FILE, {"groups": groups})
+            await message.reply_text(f"🗑️ Grup {gc_id} dihapus dari daftar.")
+        else:
+            await message.reply_text("❗ Grup tidak ditemukan dalam daftar.")
+
+    elif cmd == "listgc":
+        if not groups:
+            await message.reply_text("📭 Belum ada grup terdaftar.")
+            return
+        text = "📜 **Daftar Grup Terdaftar:**\n\n"
+        for i, gid in enumerate(groups, 1):
+            try:
+                chat = await client.get_chat(gid)
+                text += f"{i}. {chat.title} (`{gid}`)\n"
+            except:
+                text += f"{i}. (Tidak bisa diakses) `{gid}`\n"
+        await message.reply_text(text)
+
+@app.on_message(filters.group & ~filters.me & ~filters.bot)
+async def auto_reply(client: Client, message: Message):
+    if not load_status():
+        return
+    if str(message.chat.id) not in [str(g) for g in group_data["groups"]]:
+        return
+    if str(message.from_user.id) in blacklist["blacklist"]:
+        return
+    if not message.text:
         return
 
     try:
-        user_text = message.text
-        if not user_text:
-            return
-
-        await message.reply_chat_action(enums.ChatAction.TYPING)
-
         prompt = f"""
-        Balas pesan ini kayak anak muda, santai, gaul dan kekininan.
+        Balas pesan ini kayak anak muda, santai, gaul dan kekinian.
         Maksimal 2 kalimat tanpa emoji. Jangan keliatan kayak AI.
-        usahakan jangan memakai bahasa inggris, bro sis, dan jawaban sesingkat mungkin.
-        Pesan: {user_text}
+        Pesan: {message.text}
         """
 
         response = model.generate_content(prompt)
-        answer = getattr(response, "text", None) or response.candidates[0].content.parts[0].text
-        jawaban_gaul = gaya_gaul(answer)
+        answer = getattr(response, "text", None)
+        if not answer and hasattr(response, "candidates"):
+            answer = response.candidates[0].content.parts[0].text
 
-        await message.reply_text(jawaban_gaul, quote=True)
-        print(f"💬 [{message.from_user.first_name}] {user_text} → {jawaban_gaul}")
+        if not answer:
+            return
+
+        jawaban = gaya_gaul(answer)
+        await message.reply_text(jawaban, quote=True)
+        print(f"💬 [{message.chat.title}] {message.from_user.first_name}: {message.text[:30]} → {jawaban[:40]}")
 
     except Exception as e:
-        print(f"❌ Error: {e}")
+        print(f"❌ Error auto-reply: {e}")
 
+@app.on_message(filters.user(DEV) & filters.command(["update"], prefixes=[".", "/"]))
+async def update_repo(client: Client, message: Message):
+    await message.reply_text("🔄 Sedang melakukan update...")
+    try:
+        result = subprocess.run(["git", "pull"], capture_output=True, text=True)
+        output = result.stdout + result.stderr
+
+        if "Already up to date" in output:
+            await message.reply_text("✅ Sudah versi terbaru.")
+        else:
+            await message.reply_text("✅ Update selesai, bot restart...")
+            print("♻️ Restarting...")
+            os.execv(sys.executable, [sys.executable] + sys.argv)
+    except Exception as e:
+        await message.reply_text(f"❌ Gagal update: {e}")
 
 print(f"🤖 Userbot aktif — Mode awal: {'🟢 ON' if load_status() else '🔴 OFF'}")
 app.run()
