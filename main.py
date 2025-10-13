@@ -104,11 +104,11 @@ from pyrogram import filters
 from pyrogram.types import Message
 
 
-def load_plugins():
-    import importlib
-    import os
-    import sys
+import os
+import sys
+import importlib
 
+def load_plugins():
     sys.path.append(os.path.abspath("."))
 
     for folder in ["plugins", "extra_plugins"]:
@@ -120,11 +120,11 @@ def load_plugins():
                 moduleref = f"{folder}.{filename[:-3]}"
                 try:
                     mod = importlib.import_module(moduleref)
-                    if hasattr(mod, "register"):
+                    if hasattr(mod, "register") and callable(mod.register):
                         mod.register(app)
                         print(f"✅ Plugin dimuat: {folder}/{filename}")
                     else:
-                        print(f"⚠️ Plugin {folder}/{filename} tidak ada fungsi register(), dilewati")
+                        print(f"⚠️ Plugin {folder}/{filename} tidak memiliki fungsi register(), dilewati")
                 except Exception as e:
                     print(f"❌ Gagal memuat {folder}/{filename}: {e}")
 
