@@ -40,6 +40,9 @@ model = genai.GenerativeModel("gemini-2.5")
 
 app = Client("ChatAiBot", api_id=API_ID, api_hash=API_HASH, session_string=SESSION_STRING)
 
+ai_active = load_status()
+data = load_data()
+load_plugins()
 
 def load_json(path, default=None):
     if not os.path.exists(path):
@@ -69,10 +72,6 @@ def load_data():
 def save_data(data):
     save_json(DATA_FILE, data)
 
-
-ai_active = load_status()
-data = load_data()
-
 def save_json(path, data):
     with open(path, "w") as f:
         json.dump(data, f, indent=4)
@@ -95,7 +94,6 @@ def run_command(cmd: str) -> str:
         return e.output.decode().strip()
 
 def update_main_repo():
-    """Update repo utama bot"""
     main_repo_path = "."
     print("🔄 Mengecek update repo utama...")
     result = run_command(f"cd {main_repo_path} && git pull")
@@ -127,10 +125,9 @@ def auto_update_all():
 
 
 def load_plugins():
-    """
-    Load semua plugin dari 'plugins' dan 'extra_plugins'
-    serta inject 'app' ke namespace plugin.
-    """
+    import importlib
+    import os
+    import sys
     sys.path.append(os.path.abspath("."))
 
     for folder in ["plugins", "extra_plugins"]:
@@ -143,7 +140,6 @@ def load_plugins():
                 try:
                     mod = importlib.import_module(moduleref)
                     setattr(mod, "app", app)
-
                     print(f"✅ Plugin dimuat: {folder}/{filename}")
                 except Exception as e:
                     print(f"⚠️ Gagal memuat {folder}/{filename}: {e}")
