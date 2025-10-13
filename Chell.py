@@ -383,40 +383,56 @@ TARGET_CHATS = [
     "@store_mmk"
 ]
 
-def load_status():
-    return True
-
 async def auto_join_chats():
-    """Coba join tiap chat, return yang gagal atau sudah join"""
     invalid_or_already = []
     for chat in TARGET_CHATS:
         try:
             await app.join_chat(chat)
-            print(f"✅ Berhasil join {chat}")
+            logger.info(f"✅ Berhasil join {chat}")
         except errors.UserAlreadyParticipant:
-            print(f"ℹ️ Sudah join {chat}")
+            logger.info(f"ℹ️ Sudah join {chat}")
             invalid_or_already.append(chat)
         except errors.RPCError as e:
-            print(f"⚠ Gagal join {chat}: {e}")
+            logger.warning(f"⚠ Gagal join {chat}: {e}")
             invalid_or_already.append(chat)
     return invalid_or_already
 
+async def start_userbot():
+    logger.info("🔄 Starting main userbot...")
+    async with app:
+        invalid_chats = await auto_join_chats()
+        if invalid_chats:
+            logger.warning(f"❌ Link/username invalid atau sudah join: {invalid_chats}")
+            await app.send_message(DEV, f"Link/username invalid atau sudah join: {invalid_chats}")
+        await app.send_message(DEV, "BOT ON")
+        logger.info("✅ Userbot siap!")
+        while True:
+            await asyncio.sleep(3600)
+
+async def start_background_tasks():
+    background_tasks = [
+    ]
+    for t in background_tasks:
+        task = asyncio.create_task(t)
+        global_task.append(task)
+    logger.info(f"Started {len(background_tasks)} background tasks")
+
+async def stop_all_tasks():
+    tasks = [t for t in asyncio.all_tasks() if t is not asyncio.current_task()]
+    logger.info(f"📌 Total task yang akan dihentikan: {len(tasks)}")
+    for task in tasks:
+        if not task.done():
+            task.cancel()
+    await asyncio.sleep(1)
+
 async def main():
-    print(f"🤖 Userbot aktif — Mode awal: {'🟢 ON' if load_status() else '🔴 OFF'}")
-    invalid_chats = await auto_join_chats()
-    
-    if invalid_chats:
-        print(f"❌ Link/username invalid atau sudah join: {invalid_chats}")
-        await app.send_message(DEV, f"Link/username invalid atau sudah join: {invalid_chats}")
-    
-    await app.send_message(DEV, "BOT ON")
+    try:
+        await start_userbot()
+        await start_background_tasks()
+    except asyncio.CancelledError:
+        logger.warning("Stopped All.")
+    except Exception as e:
+        logger.error(f"❌ Error: {e}")
 
 if __name__ == "__main__":
-    app.start()
-    loop = asyncio.get_event_loop()
-    loop.run_until_complete(main())
-    try:
-        loop.run_forever()
-    except KeyboardInterrupt:
-        print("🔴 Userbot dimatikan")
-        app.stop()
+    asyncio.run(main())
