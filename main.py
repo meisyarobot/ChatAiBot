@@ -85,6 +85,8 @@ def load_plugins():
         try:
             module = importlib.import_module(module_path)
             importlib.reload(module)
+            if hasattr(module, "init") and callable(module.init):
+                module.init(app)
             print(f"✅ Plugin dimuat: {module_path}")
         except Exception as e:
             print(f"❌ Gagal memuat {module_path}: {e}")
