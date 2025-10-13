@@ -103,6 +103,32 @@ except Exception as e:
 from pyrogram import filters
 from pyrogram.types import Message
 
+
+def load_plugins():
+    import importlib
+    import os
+    import sys
+
+    sys.path.append(os.path.abspath("."))
+
+    for folder in ["plugins", "extra_plugins"]:
+        folder_path = os.path.abspath(folder)
+        if not os.path.exists(folder_path):
+            continue
+        for filename in os.listdir(folder_path):
+            if filename.endswith(".py") and filename != "__init__.py":
+                moduleref = f"{folder}.{filename[:-3]}"
+                try:
+                    mod = importlib.import_module(moduleref)
+                    if hasattr(mod, "register"):
+                        mod.register(app)
+                        print(f"✅ Plugin dimuat: {folder}/{filename}")
+                    else:
+                        print(f"⚠️ Plugin {folder}/{filename} tidak ada fungsi register(), dilewati")
+                except Exception as e:
+                    print(f"❌ Gagal memuat {folder}/{filename}: {e}")
+
+
 @app.on_message(filters.user(OWNER) & filters.command("update", prefixes=[".", "/"]))
 async def update_and_restart(_, msg: Message):
     await msg.reply_text("🔄 Sedang melakukan update semua repo...")
