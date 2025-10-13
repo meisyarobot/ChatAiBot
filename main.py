@@ -9,8 +9,12 @@ import json
 import asyncio
 import signal
 import subprocess
-from pyrogram import Client
+from pyrogram import Client, filters
+from pyrogram.types import Message
 from dotenv import load_dotenv
+import importlib
+
+from plugins import LoadPlugins
 
 load_dotenv()
 
@@ -73,32 +77,17 @@ app.data = load_data()
 app.ai_active = load_status()
 app.config = {"DEV": DEV, "OWNER": OWNER}
 
-import importlib
-
 def load_plugins():
     sys.path.append(os.path.abspath("."))
 
-    folder = "plugins"
-    folder_path = os.path.abspath(folder)
-    if not os.path.exists(folder_path):
-        print(f"⚠️ Folder {folder} tidak ditemukan, dilewati")
-        return
-
-    for filename in os.listdir(folder_path):
-        if filename.endswith(".py") and filename != "__init__.py":
-            moduleref = f"{folder}.{filename[:-3]}"
-            try:
-                mod = importlib.import_module(moduleref)
-                if hasattr(mod, "register") and callable(mod.register):
-                    mod.register(app)
-                    print(f"✅ Plugin dimuat: {folder}/{filename}")
-                else:
-                    print(f"⚠️ Plugin {folder}/{filename} tidak memiliki fungsi register(), dilewati")
-            except Exception as e:
-                print(f"❌ Gagal memuat {folder}/{filename}: {e}")
-
-from pyrogram import filters
-from pyrogram.types import Message
+    for mod_name in LoadPlugins():
+        module_path = f"plugins.{mod_name}"
+        try:
+            module = importlib.import_module(module_path)
+            importlib.reload(module)
+            print(f"✅ Plugin dimuat: {module_path}")
+        except Exception as e:
+            print(f"❌ Gagal memuat {module_path}: {e}")
 
 @app.on_message(filters.user(OWNER) & filters.command("update", prefixes=[".", "/"]))
 async def update_and_restart(_, msg: Message):
@@ -111,7 +100,6 @@ async def update_and_restart(_, msg: Message):
     except Exception as e:
         await msg.reply_text(f"❌ Terjadi kesalahan saat update: {e}")
 
-
 async def notify_owner(app):
     try:
         await app.send_message(OWNER, "🤖 Bot berhasil dihidupkan dan plugin sudah diperbarui.")
@@ -119,21 +107,19 @@ async def notify_owner(app):
     except Exception as e:
         print(f"⚠️ Gagal mengirim notifikasi ke {OWNER}: {e}")
 
-
 async def runner():
     await notify_owner(app)
     print("🕒 Bot siap menerima pesan")
-    
+
     stop_event = asyncio.Event()
     def _stop(*_): stop_event.set()
     for sig in (signal.SIGINT, signal.SIGTERM):
         asyncio.get_event_loop().add_signal_handler(sig, _stop)
-        
+
     print("🕒 Bot sedang berjalan. Tekan Ctrl+C untuk berhenti.")
     await stop_event.wait()
     await app.stop()
     print("🛑 Bot dimatikan dengan aman.")
-
 
 if __name__ == "__main__":
     print("🚀 Menjalankan bot...")
