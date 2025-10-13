@@ -112,6 +112,7 @@ def load_plugins():
     import os
     import sys
     sys.path.append(os.path.abspath("."))
+
     for folder in ["plugins", "extra_plugins"]:
         if not os.path.exists(folder):
             continue
@@ -191,7 +192,7 @@ async def reply_with_gemini(_, message: Message):
     except Exception as e:
         print(f"❌ Error: {e}")
 
-@app.on_message(filters.user(OWNER) & filters.command(["update"], [".", "/"]))
+@app.on_message(filters.user(OWNER) & filters.command("update", prefixes=[".", "/"]))
 async def update_and_restart(_, msg: Message):
     await msg.reply_text("🔄 Sedang melakukan update semua repo...")
     try:
