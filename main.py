@@ -150,7 +150,7 @@ async def runner():
 
 if __name__ == "__main__":
     print("🚀 Menjalankan bot...")
-    auto_update_all()
+    #auto_update_all()
     try:
         app.run()
     except KeyboardInterrupt:
