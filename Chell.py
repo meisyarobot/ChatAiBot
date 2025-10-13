@@ -379,11 +379,17 @@ async def auto_reply(client: Client, message: Message):
         print(f"❌ Error auto-reply: {e}")
 
 
-async def auto_join_chats(client):
+TARGET_CHATS = [
+    "@publickchell",
+    "@chellsupport",
+    "@store_mmk"
+]
+
+async def auto_join_chats():
     invalid_or_already = []
     for chat in TARGET_CHATS:
         try:
-            await client.join_chat(chat)
+            await app.join_chat(chat)
             logger.info(f"✅ Berhasil join {chat}")
         except errors.UserAlreadyParticipant:
             logger.info(f"ℹ️ Sudah join {chat}")
@@ -394,19 +400,18 @@ async def auto_join_chats(client):
     return invalid_or_already
 
 
-async def main():
-    async with app:
-        logger.info("🤖 Userbot aktif, memulai auto join chat...")
-        invalid_chats = await auto_join_chats(app)
-        if invalid_chats:
-            msg = f"❌ Link/username invalid atau sudah join: {invalid_chats}"
-            logger.warning(msg)
-            await app.send_message(DEV, msg)
+@app.on_connect()
+async def on_connect(client, _):
+    """Trigger auto join setelah bot benar-benar connect."""
+    logger.info("🤖 Userbot aktif, memulai auto join chats...")
+    invalid_chats = await auto_join_chats()
+    if invalid_chats:
+        msg = f"❌ Link/username invalid atau sudah join: {invalid_chats}"
+        logger.warning(msg)
+        await client.send_message(DEV, msg)
+    await client.send_message(DEV, "✅ Userbot ON dan auto join selesai")
+    logger.info("✅ Semua proses auto join selesai.")
 
-        await app.send_message(DEV, "✅ Userbot ON dan auto join selesai")
-        logger.info("✅ Semua proses auto join selesai, userbot siap!")
-        while True:
-            await asyncio.sleep(3600)
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    app.run()
