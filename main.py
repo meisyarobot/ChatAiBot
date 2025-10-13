@@ -171,24 +171,27 @@ async def notify_owner():
         print(f"⚠️ Gagal mengirim notifikasi ke {OWNER}: {e}")
 
 
-@app.on_message(filters.chat(GROUP_TARGET) & ~filters.me & ~filters.bot)
+@app.on_message(~filters.me & ~filters.bot)
 async def main_handler(client: Client, message: Message):
     if message.text and message.text.startswith((".", "/")):
         return
     if not load_status():
         return
-
     user = message.from_user
     if not user or user.is_bot:
         return
-        
     if user.id in data["blacklist"]:
         print(f"🚫 {user.first_name} diblacklist, di-skip.")
         return
-
-    if data["allowed_groups"] and message.chat.id not in data["allowed_groups"]:
-        print(f"🚷 Grup {message.chat.title} belum di-whitelist.")
+    if message.chat.type in ["group", "supergroup"]:
+        if data["allowed_groups"] and message.chat.id not in data["allowed_groups"]:
+            print(f"🚷 Grup {message.chat.title} belum di-whitelist.")
+            return
+    elif message.chat.type == "private":
+        pass
+    else:
         return
+
     try:
         user_text = message.text
         if not user_text:
@@ -201,6 +204,15 @@ async def main_handler(client: Client, message: Message):
         Maksimal 2 kalimat tanpa emoji. Jangan tunjukkan kalau AI. Bercanda atau logika seperti manusia.
         Pesan: {user_text}
         """
+
+        response = model.generate_content(prompt)
+        answer = getattr(response, "text", None) or response.candidates[0].content.parts[0].text
+        jawaban_gaul = gaya_gaul(answer)
+        await message.reply_text(jawaban_gaul, quote=True)
+        print(f"💬 [{user.first_name}] {user_text} → {jawaban_gaul}")
+    except Exception as e:
+        print(f"❌ Error: {e}")
+
 
         response = model.generate_content(prompt)
         answer = getattr(response, "text", None) or response.candidates[0].content.parts[0].text
