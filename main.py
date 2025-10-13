@@ -116,14 +116,14 @@ async def update_and_restart(_, msg: Message):
 
 
 async def runner():
-    await app.start()
     await notify_owner(app)
-
+    print("🕒 Bot siap menerima pesan")
+    
     stop_event = asyncio.Event()
     def _stop(*_): stop_event.set()
     for sig in (signal.SIGINT, signal.SIGTERM):
         asyncio.get_event_loop().add_signal_handler(sig, _stop)
-
+        
     print("🕒 Bot sedang berjalan. Tekan Ctrl+C untuk berhenti.")
     await stop_event.wait()
     await app.stop()
@@ -133,6 +133,6 @@ if __name__ == "__main__":
     print("🚀 Menjalankan bot...")
     auto_update_all()
     try:
-        asyncio.run(runner())
+        app.run()
     except KeyboardInterrupt:
         print("🛑 Bot dimatikan paksa.")
