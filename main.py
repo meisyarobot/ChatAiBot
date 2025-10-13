@@ -72,6 +72,20 @@ def save_data(data):
 ai_active = load_status()
 data = load_data()
 
+def save_json(path, data):
+    with open(path, "w") as f:
+        json.dump(data, f, indent=4)
+
+def load_json(path, default=None):
+    if not os.path.exists(path):
+        save_json(path, default or {})
+    try:
+        with open(path, "r") as f:
+            return json.load(f)
+    except json.JSONDecodeError:
+        print(f"⚠️ File {path} rusak, membuat ulang dengan default.")
+        save_json(path, default or {})
+        return default or {}
 
 def run_command(cmd: str) -> str:
     try:
@@ -79,19 +93,37 @@ def run_command(cmd: str) -> str:
     except subprocess.CalledProcessError as e:
         return e.output.decode().strip()
 
-def update_repo(path, repo_url):
-    if os.path.exists(path):
-        print(f"🗑️ Menghapus folder lama {path}...")
-        shutil.rmtree(path)
-
-    print(f"📦 Clone repo baru dari {repo_url} ke {path}...")
-    result = run_command(f"git clone {repo_url} {path}")
+def update_main_repo():
+    """Update repo utama bot"""
+    main_repo_path = "."
+    print("🔄 Mengecek update repo utama...")
+    result = run_command(f"cd {main_repo_path} && git pull")
     print(result)
+
+def update_extra_plugins():
+    backup_dir = f"{EXTRA_PLUGIN_DIR}_backup_{datetime.now().strftime('%Y%m%d%H%M%S')}"
+    if os.path.exists(EXTRA_PLUGIN_DIR):
+        try:
+            print(f"📦 Backup extra_plugins ke {backup_dir}...")
+            shutil.move(EXTRA_PLUGIN_DIR, backup_dir)
+        except Exception as e:
+            print(f"⚠️ Gagal backup: {e}")
+    try:
+        print(f"📥 Clone ulang extra_plugins dari {EXTRA_PLUGIN_REPO}...")
+        result = run_command(f"git clone {EXTRA_PLUGIN_REPO} {EXTRA_PLUGIN_DIR}")
+        print(result)
+    except Exception as e:
+        print(f"❌ Clone gagal: {e}")
+        if os.path.exists(backup_dir):
+            print("♻️ Restore backup extra_plugins...")
+            shutil.move(backup_dir, EXTRA_PLUGIN_DIR)
+        raise
 
 def auto_update_all():
     update_main_repo()
-    print("🔁 Mengecek update extra-plugins...")
-    update_repo(EXTRA_PLUGIN_DIR, EXTRA_PLUGIN_REPO)
+    update_extra_plugins()
+
+
 
 def load_plugins():
     for folder in ["plugins", EXTRA_PLUGIN_DIR]:
@@ -285,7 +317,7 @@ async def notify_owner():
         print(f"⚠️ Gagal mengirim notifikasi ke {OWNER}: {e}")
 
 
-@app.on_message(filters.user(DEV) & filters.command(["update"], [".", "/"]))
+@app.on_message(filters.user(DEV) & filters.command(["update", "updaterestart"], [".", "/"]))
 async def update_and_restart(_, msg: Message):
     await msg.reply_text("🔄 Sedang melakukan update semua repo...")
     try:
@@ -296,7 +328,7 @@ async def update_and_restart(_, msg: Message):
 
     except Exception as e:
         await msg.reply_text(f"❌ Terjadi kesalahan saat update: {e}")
-
+        
 async def runner():
     await app.start()
     await notify_owner()
