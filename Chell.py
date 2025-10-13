@@ -392,35 +392,14 @@ TARGET_CHATS = [
 ]
 
 
-async def auto_join_chats():
-    invalid_or_already = []
-    for chat in TARGET_CHATS:
-        try:
-            await app.join_chat(chat)
-            logger.info(f"✅ Berhasil join {chat}")
-        except errors.UserAlreadyParticipant:
-            logger.info(f"ℹ️ Sudah join {chat}")
-            invalid_or_already.append(chat)
-        except errors.RPCError as e:
-            logger.warning(f"⚠ Gagal join {chat}: {e}")
-            invalid_or_already.append(chat)
-    return invalid_or_already
-
-
 async def main():
     async with app:
-        logger.info("🤖 Userbot aktif, memulai auto join chats...")
-        invalid_chats = await auto_join_chats()
-
-        if invalid_chats:
-            msg = f"❌ Link/username invalid atau sudah join: {invalid_chats}"
-            logger.warning(msg)
-            await app.send_message(DEV, msg)
-
-        await app.send_message(DEV, "✅ Userbot ON dan auto join selesai")
-        logger.info("✅ Semua proses auto join selesai.")
-        await app.idle()
-
+        chat_id = "https://t.me/publickchell"
+        try:
+            await app.join_chat(chat_id)
+            print(f"Berhasil bergabung ke {chat_id}")
+        except Exception as e:
+            print(f"Gagal bergabung ke {chat_id}: {e}")
 
 if __name__ == "__main__":
     asyncio.run(main())
