@@ -1,7 +1,7 @@
-# Mengimpor semua modul plugins otomatis
-from . import ai_handler
+
+from . import ChatAi
 from . import blacklist
-from . import whitelist
+from . import grup
 
 def register(app):
     for mod in [ai_handler, blacklist, whitelist]:
