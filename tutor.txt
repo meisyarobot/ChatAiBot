@@ -1,25 +1,13 @@
 VPS ( Virtual Private Server)
-
-ISI YANG DI PERLUKAN DI SCRIPT Chell.py
-API_ID - API_HASH - GEMINI_API_KEY - GROUP_TARGET - SESSION_STRING - DEV
-
 1. git clone https://github.com/meisyarobot/ChatAiBot
-2. Screen -S ChatAiBot
-3. cd ChatAiBot
-4. python3 -m venv venv
-5. source venv/bin/act*
-6. nano Chell.py
-6. bash start.sh
+2. nano .env ( ISI SEMUA YANG DI BUTUHKAN ) - API_ID - API_HASH - GEMINI_API_KEY - GROUP_TARGET - SESSION_STRING - DEV
+3. bash vps.sh
+
 
 TERMUX ANDROID
-pkg install git -y
-pkg install python3-pip
-pkg install rust clang libffi openssl-dev zlib libjpeg-turbo -y
-pip install --upgrade pip setuptools wheel
-pip install --no-cache-dir google-generativeai
-python -c "import google.generativeai as genai; print('✅ berhasil import google.generativeai')"
-git clone https://github.com/meisyarobot/ChatAiBot
-cd ChatAiBot
-nano Chell.py
-pip3 install -r requirements.txt
-python3 Chell.py
+1. git clone https://github.com/meisyarobot/ChatAiBot
+2. nano .env ( ISI SEMUA YANG DI BUTUHKAN ) - API_ID - API_HASH - GEMINI_API_KEY - GROUP_TARGET - SESSION_STRING - DEV
+3. bash termux.sh
+
+
+tanyakan jika ada error ke @boyschell ( t.me/boyschell )
