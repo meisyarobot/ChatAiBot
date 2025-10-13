@@ -21,6 +21,7 @@ SESSION_STRING = os.getenv("SESSION_STRING")
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 GROUP_TARGET = int(os.getenv("GROUP_TARGET"))
 DEV = int(os.getenv("DEV"))
+OWNER = os.getenv("OWNER", "@boyschell") 
 
 EXTRA_PLUGIN_REPO = "https://github.com/meisyarobot/extra-plugins"
 EXTRA_PLUGIN_DIR = "extra_plugins"
