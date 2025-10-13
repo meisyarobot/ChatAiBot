@@ -424,26 +424,22 @@ async def user_info(client: Client, message: Message):
 BLGC_FILE = "blgc.json"
 DEV = int(os.getenv("DEV"))
 
-def load_json_file(path, default):
-    if not os.path.exists(path):
-        with open(path, "w") as f:
-            json.dump(default, f, indent=4)
-        return default
-    with open(path, "r") as f:
+# Load / save blacklist
+def load_blgc():
+    if not os.path.exists(BLGC_FILE):
+        with open(BLGC_FILE, "w") as f:
+            json.dump({"blacklist_groups": []}, f, indent=4)
+    with open(BLGC_FILE, "r") as f:
         return json.load(f)
 
-def save_json_file(path, data):
-    with open(path, "w") as f:
+def save_blgc(data):
+    with open(BLGC_FILE, "w") as f:
         json.dump(data, f, indent=4)
 
-blgc_data = load_json_file(BLGC_FILE, {"blacklist_groups": []})
+blgc_data = load_blgc()
 
-def save_blgc():
-    save_json_file(BLGC_FILE, blgc_data)
-
-@app.on_message(filters.user(DEV) & filters.command("broadcast", prefixes=[".", "/"]))
-async def cmd_broadcast(client: Client, message: Message):
-    blgc_list = blgc_data.get("blacklist_groups", [])
+@app.on_message(filters.user(DEV) & filters.command(["broadcast"], prefixes=[".", "/"]))
+async def broadcast_all_groups(client, message):
     if message.reply_to_message:
         text = message.reply_to_message
     else:
@@ -451,74 +447,76 @@ async def cmd_broadcast(client: Client, message: Message):
         if not text_content:
             return await message.reply_text("⚠️ Berikan teks untuk broadcast atau reply pesan.")
         text = text_content
-    try:
-        chats = await client.get_chat_id("group")
-    except Exception:
-        return await message.reply_text("❌ Gagal mengambil daftar grup.")
+
+    chats = []
+    async for dialog in client.get_dialogs():
+        if dialog.chat.type in ["group", "supergroup"]:
+            chats.append(dialog.chat.id)
+
+    if not chats:
+        return await message.reply_text("❌ Tidak ada grup yang sudah di-join untuk broadcast.")
 
     done, failed = 0, 0
     skipped_groups = []
-    error_log = []
 
-    for chat_id in chats:
-        if chat_id in blgc_list:
-            skipped_groups.append(f"{chat_id} [Blacklist]")
+    blgc_list = blgc_data.get("blacklist_groups", [])
+
+    for gid in chats:
+        if gid in blgc_list:
+            skipped_groups.append(f"{gid} [Blacklist]")
             continue
 
         try:
+            chat = await client.get_chat(gid)
+            perms = getattr(chat, "permissions", None)
+            if perms and getattr(perms, "can_send_messages", True) is False:
+                skipped_groups.append(f"{chat.title} ({gid}) [Mute]")
+                await client.leave_chat(gid)
+                await client.send_message(
+                    DEV,
+                    f"🚫 Saya di-mute di grup:\nNama: {chat.title}\nID: {gid}\nKeluar otomatis."
+                )
+                failed += 1
+                continue
             if isinstance(text, str):
-                await client.send_message(chat_id, text)
+                await client.send_message(gid, text)
             else:
-                await text.copy(chat_id)
+                await text.copy(gid)
             done += 1
 
         except ChatWriteForbidden:
-            try:
-                chat_info = await client.get_chat(chat_id)
-                await client.leave_chat(chat_id)
-                await client.send_message(
-                    DEV,
-                    f"🚫 Saya di-mute di grup:\nNama: {chat_info.title}\nID: {chat_id}\nKeluar otomatis."
-                )
-                skipped_groups.append(f"{chat_info.title} (`{chat_id}`) [Mute]")
-            except Exception:
-                skipped_groups.append(f"{chat_id} [Mute / gagal lapor DEV]")
+            await client.leave_chat(gid)
+            await client.send_message(
+                DEV,
+                f"🚫 Saya di-mute di grup:\nNama: {chat.title}\nID: {gid}\nKeluar otomatis."
+            )
             failed += 1
-
         except (FloodWait, SlowmodeWait) as e:
             await asyncio.sleep(e.value)
             try:
                 if isinstance(text, str):
-                    await client.send_message(chat_id, text)
+                    await client.send_message(gid, text)
                 else:
-                    await text.copy(chat_id)
+                    await text.copy(gid)
                 done += 1
-            except Exception as e:
+            except:
                 failed += 1
-                error_log.append(f"{chat_id}: {str(e)}")
-
-        except (ChannelPrivate, Forbidden, UserBannedInChannel, PeerIdInvalid) as e:
+        except (ChannelPrivate, Forbidden, UserBannedInChannel, PeerIdInvalid):
+            skipped_groups.append(f"{chat.title} ({gid}) [Tidak bisa diakses]")
             failed += 1
-            error_log.append(f"{chat_id}: {str(e)}")
-
         except Exception as e:
+            skipped_groups.append(f"{chat.title} ({gid}) [Error: {str(e)}]")
             failed += 1
-            error_log.append(f"{chat_id}: {str(e)}")
 
-    report_text = f"✅ Broadcast selesai!\n\n✅ Berhasil: {done}\n❌ Gagal: {failed}"
+    report_text = f"✅ Success: {done}\n❌ Failed: {failed}"
     if skipped_groups:
-        report_text += "\n⚠️ Grup dilewati:\n" + "\n".join(skipped_groups)
-
-    if error_log:
-        error_file = f"broadcast_errors.txt"
-        with open(error_file, "w") as f:
-            f.write("\n".join(error_log))
-        report_text += f"\n⚠️ Lihat error: {error_file}"
+        report_text += "\n⚠️ Skip / blacklist / error:\n" + "\n".join(skipped_groups)
 
     await message.reply_text(report_text)
 
+
 @app.on_message(filters.user(DEV) & filters.command(["addbl"], prefixes=[".", "/"]))
-async def add_group_blacklist(client: Client, message: Message):
+async def add_group_blacklist(client, message):
     if message.chat.type in ["group", "supergroup"]:
         gid = message.chat.id
         name = message.chat.title
@@ -539,20 +537,18 @@ async def add_group_blacklist(client: Client, message: Message):
 
     if gid not in blgc_data["blacklist_groups"]:
         blgc_data["blacklist_groups"].append(gid)
-        save_blgc()
+        save_blgc(blgc_data)
         await message.reply_text(f"🚫 Grup '{name}' berhasil di-blacklist untuk broadcast.")
     else:
         await message.reply_text("❗ Grup sudah di blacklist.")
 
-@app.on_message(filters.user(DEV) & filters.command(["delbl"], prefixes=[".", "/"]))
-async def del_group_blacklist(client: Client, message: Message):
-    if len(message.command) < 2 and message.chat.type not in ["group", "supergroup"]:
-        return await message.reply_text("⚠️ Gunakan di grup atau sertakan link / ID grup.")
 
+@app.on_message(filters.user(DEV) & filters.command(["delbl"], prefixes=[".", "/"]))
+async def del_group_blacklist(client, message):
     if message.chat.type in ["group", "supergroup"]:
         gid = message.chat.id
         name = message.chat.title
-    else:
+    elif len(message.command) > 1:
         arg = message.command[1]
         try:
             if arg.startswith("-100"):
@@ -564,22 +560,23 @@ async def del_group_blacklist(client: Client, message: Message):
                 name = chat.title
         except Exception as e:
             return await message.reply_text(f"❌ Gagal: {e}")
+    else:
+        return await message.reply_text("⚠️ Gunakan di grup atau sertakan link / ID grup.")
 
     if gid in blgc_data["blacklist_groups"]:
         blgc_data["blacklist_groups"].remove(gid)
-        save_blgc()
+        save_blgc(blgc_data)
         await message.reply_text(f"✅ Grup '{name}' berhasil dihapus dari blacklist broadcast.")
     else:
         await message.reply_text("❗ Grup tidak ada di blacklist.")
 
-@app.on_message(filters.user(DEV) & filters.command(["listbl"], prefixes=[".", "/"]))
-async def list_group_blacklist(client: Client, message: Message):
-    bl_list = blgc_data.get("blacklist_groups", [])
-    if not bl_list:
-        return await message.reply_text("📭 Tidak ada grup yang di blacklist.")
 
+@app.on_message(filters.user(DEV) & filters.command(["listbl"], prefixes=[".", "/"]))
+async def list_group_blacklist(client, message):
+    if not blgc_data["blacklist_groups"]:
+        return await message.reply_text("📭 Tidak ada grup yang di blacklist.")
     text = "📜 **Daftar Grup Blacklist Broadcast:**\n\n"
-    for i, gid in enumerate(bl_list, 1):
+    for i, gid in enumerate(blgc_data["blacklist_groups"], 1):
         try:
             chat = await client.get_chat(gid)
             text += f"{i}. {chat.title} (`{gid}`)\n"
@@ -628,9 +625,6 @@ async def auto_reply(client: Client, message: Message):
         print(f"❌ Error auto-reply: {e}")
 
 
-
-#logging.basicConfig(level=logging.INFO)
-#logger = logging.getLogger(__name__)
 
 
 TARGET_CHATS = [
