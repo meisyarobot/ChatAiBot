@@ -400,14 +400,20 @@ async def join_target_chats():
         except Exception as e:
             print(f"❌ Gagal bergabung ke {chat}: {e}")
 
-async def main():
-    await app.start()
-    print("Bot sudah aktif, mulai join target chats...")
+async def startup_tasks():
     await join_target_chats()
     print("Auto join selesai.")
-    await idle()
-    await app.stop()
-    print("Bot berhenti.")
 
 if __name__ == "__main__":
+    async def main():
+        await app.start()
+        print("Bot sudah aktif, mulai join target chats...")
+        asyncio.create_task(startup_tasks())
+        await idle()
+        await app.stop()
+
+
+    import nest_asyncio
+    nest_asyncio.apply()
+    app.loop.run_until_complete(main())
     asyncio.run(main())
