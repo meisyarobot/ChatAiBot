@@ -379,19 +379,14 @@ async def auto_reply(client: Client, message: Message):
         print(f"❌ Error auto-reply: {e}")
 
 
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(levelname)s - %(message)s"
-)
+from pyrogram import Client, errors
+import logging
+
+logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-TARGET_CHATS = [
-    "@publickchell",
-    "@chellsupport",
-    "@store_mmk"
-]
+TARGET_CHATS = ["@publickchell", "@chellsupport", "@store_mmk"]
 
-global_task = []
 
 async def auto_join_chats():
     invalid_or_already = []
@@ -407,34 +402,13 @@ async def auto_join_chats():
             invalid_or_already.append(chat)
     return invalid_or_already
 
-async def start_userbot():
-    logger.info("🔄 Starting main userbot...")
-    async with app:
-        invalid_chats = await auto_join_chats()
-        if invalid_chats:
-            logger.warning(f"❌ Link/username invalid atau sudah join: {invalid_chats}")
-            await app.send_message(DEV, f"Link/username invalid atau sudah join: {invalid_chats}")
-        await app.send_message(DEV, "BOT ON")
-        logger.info("✅ Userbot siap!")
-        while True:
-            await asyncio.sleep(3600)
-
-async def start_background_tasks():
-    background_tasks = [
-    ]
-    for t in background_tasks:
-        task = asyncio.create_task(t)
-        global_task.append(task)
-    logger.info(f"Started {len(background_tasks)} background tasks")
-
 async def main():
-    try:
-        await start_userbot()
-        await start_background_tasks()
-    except asyncio.CancelledError:
-        logger.warning("Stopped All.")
-    except Exception as e:
-        logger.error(f"❌ Error: {e}")
+    invalid_chats = await auto_join_chats()
+    if invalid_chats:
+        logger.warning(f"❌ Link/username invalid atau sudah join: {invalid_chats}")
+        await app.send_message(DEV, f"Link/username invalid atau sudah join: {invalid_chats}")
+    await app.send_message(DEV, "BOT ON")
+    logger.info("✅ Userbot siap!")
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    app.run(main())
