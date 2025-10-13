@@ -1,7 +1,10 @@
-navygram
-pyrogram
+# Pyrogram & Dependencies
+pyrogram==2.0.106
+tgcrypto
 google-generativeai
-httpx
+requests
 aiohttp
-norsodikin
-dotenv
+asyncio
+gitpython
+rich
+python-dotenv
