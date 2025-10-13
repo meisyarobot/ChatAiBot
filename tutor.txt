@@ -12,10 +12,14 @@ API_ID - API_HASH - GEMINI_API_KEY - GROUP_TARGET - SESSION_STRING - DEV
 6. bash start.sh
 
 TERMUX ANDROID
-1. pkg install git -y
-2. pkg install python3-pip
-3. git clone https://github.com/meisyarobot/ChatAiBot
-4. cd ChatAiBot
-5. nano Chell.py
-6. pip3 install -r requirements.txt
-7. python3 Chell.py
+pkg install git -y
+pkg install python3-pip
+pkg install rust clang libffi openssl-dev zlib libjpeg-turbo -y
+pip install --upgrade pip setuptools wheel
+pip install --no-cache-dir google-generativeai
+python -c "import google.generativeai as genai; print('✅ berhasil import google.generativeai')"
+git clone https://github.com/meisyarobot/ChatAiBot
+cd ChatAiBot
+nano Chell.py
+pip3 install -r requirements.txt
+python3 Chell.py
