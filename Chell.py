@@ -62,14 +62,6 @@ def gaya_gaul(text: str) -> str:
 app = Client("AutoChat", api_id=API_ID, api_hash=API_HASH, session_string=SESSION_STRING)
 
 
-@app.on_start()
-async def notify_dev_on_start():
-    try:
-        await app.send_message(DEV, "✅ Bot sudah aktif dan siap ngebacot 😎")
-        print("📩 Notifikasi dikirim ke DEV.")
-    except Exception as e:
-        print(f"⚠️ Gagal kirim pesan ke DEV: {e}")
-
 @app.on_message(filters.command(["ask"], prefixes=[".", "/"]))
 async def ask_gemini(client: Client, message: Message):
     try:
@@ -321,3 +313,4 @@ async def auto_reply(client: Client, message: Message):
 
 print(f"🤖 Userbot aktif — Mode awal: {'🟢 ON' if load_status() else '🔴 OFF'}")
 app.run()
+app.send_message(DEV, "BOT ON")
