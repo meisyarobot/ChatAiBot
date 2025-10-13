@@ -170,6 +170,22 @@ async def notify_owner():
     except Exception as e:
         print(f"⚠️ Gagal mengirim notifikasi ke {OWNER}: {e}")
 
+# LOAD PLUGINS #
+for folder in ["plugins", "extra_plugins"]:
+    folder_path = os.path.abspath(folder)
+    if os.path.exists(folder_path):
+        sys.path.append(folder_path)
+        for filename in os.listdir(folder_path):
+            if filename.endswith(".py") and filename != "__init__.py":
+                modulename = filename[:-3]
+                moduleref = f"{folder.replace('/', '.')}.{modulename}"
+                try:
+                    importlib.import_module(moduleref)
+                    print(f"✅ Plugin dimuat: {folder}/{filename}")
+                except Exception as e:
+                    print(f"⚠️ Gagal memuat {folder}/{filename}: {e}")
+
+# CHAT AI #
 
 @app.on_message(~filters.me & ~filters.bot)
 async def main_handler(client: Client, message: Message):
