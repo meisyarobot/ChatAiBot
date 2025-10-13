@@ -16,6 +16,7 @@ from pyrogram.types import Message
 import google.generativeai as genai
 import psutil
 import platform
+import shlex
 
 load_dotenv()
 API_ID = int(os.getenv("API_ID"))
@@ -81,7 +82,7 @@ def get_os_info():
     
 app = Client("AutoChat", api_id=API_ID, api_hash=API_HASH, session_string=SESSION_STRING)
 
-@app.on_message(filters.user(DEV) & filters.command([host], prefixes=[".", "/"]))
+@app.on_message(filters.user(DEV) & filters.command(["host"], prefixes=[".", "/"]))
 async def check_vps_status(client: Client, message: Message):
     chl = await message.reply("Proses")
     cpu_usage_per_core = get_cpu_usage_per_core()
@@ -106,18 +107,40 @@ async def check_vps_status(client: Client, message: Message):
     disk_info += f"  Persentase: {psutil.disk_usage('/').percent}%\n"
     full_info = cpu_info + "\n" + memory_info + "\n" + os_info + "\n" + disk_info
     return await chl.edit(full_info)
+    
+@app.on_message(filters.user(DEV) & filters.command(["sh", "shell"], prefixes=[".", "/"]))
+async def shell_command(client, message: Message):
+    user = message.from_user
+    if user.id not in AUTHORIZED_USERS:
+        return await message.reply_text("❌ Kamu tidak diizinkan menggunakan command ini.")
+
+    if len(message.command) < 2:
+        return await message.reply_text("⚠️ Gunakan: `/sh <perintah>`")
+
+    cmd_text = " ".join(message.command[1:])
+    try:
+        cmd_list = shlex.split(cmd_text)
+        result = subprocess.run(cmd_list, capture_output=True, text=True, shell=False, timeout=15)
+        output = result.stdout.strip() or result.stderr.strip()
+        if not output:
+            output = "✅ Perintah dijalankan, tapi tidak ada output."
+        if len(output) > 4000:
+            output = output[:4000] + "\n\n...output terpotong..."
+        await message.reply_text(f"💻 Perintah: `{cmd_text}`\n\n📥 Output:\n{output}", quote=True)
+    except subprocess.TimeoutExpired:
+        await message.reply_text("⏱️ Perintah timeout (lebih dari 15 detik).", quote=True)
+    except Exception as e:
+        await message.reply_text(f"❌ Error: {e}", quote=True)
 
 @app.on_message(filters.command(["ask"], prefixes=[".", "/"]))
 async def ask_gemini(client: Client, message: Message):
     try:
         if str(message.chat.id) in blacklist["blacklist"]:
             return
-
         question = message.text.split(" ", 1)
         if len(question) < 2:
             await message.reply_text("❓ Contoh: `.ask kenapa langit berwarna biru?`")
             return
-
         prompt = question[1]
         await message.reply_chat_action(enums.ChatAction.TYPING)
 
