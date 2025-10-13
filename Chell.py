@@ -401,8 +401,15 @@ async def join_target_chats():
             print(f"❌ Gagal bergabung ke {chat}: {e}")
 
 if __name__ == "__main__":
-    async def on_startup():
+    async def main():
         print("Bot sudah aktif, mulai join target chats...")
         await join_target_chats()
         print("Auto join selesai.")
-    app.run(on_startup=on_startup)
+        await app.start()
+        print("Bot berjalan...")
+        await idle()
+        await app.stop()
+
+    from pyrogram import idle
+    import asyncio
+    asyncio.run(main())
