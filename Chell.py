@@ -399,11 +399,17 @@ async def auto_join_chats():
 
 async def main():
     print(f"🤖 Userbot aktif — Mode awal: {'🟢 ON' if load_status() else '🔴 OFF'}")
+    
+    await app.start()
     invalid = await auto_join_chats()
     if invalid:
         print(f"❌ Link/username invalid: {invalid}")
         await app.send_message(DEV, f"Link/username invalid: {invalid}")
+    
     await app.send_message(DEV, "BOT ON")
-    await app.run()
+    
+    await app.idle()
 
-asyncio.run(main())
+if __name__ == "__main__":
+    import asyncio
+    asyncio.run(main())
