@@ -18,4 +18,4 @@ TERMUX ANDROID
 4. cd ChatAiBot
 5. nano Chell.py
 6. pip3 install -r requirements.txt
-7. python3 chell.py
+7. python3 Chell.py
