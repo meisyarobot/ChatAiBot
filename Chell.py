@@ -392,14 +392,22 @@ TARGET_CHATS = [
 ]
 
 
-async def main():
-    async with app:
-        chat_id = "https://t.me/publickchell"
+async def join_target_chats():
+    for chat in TARGET_CHATS:
         try:
-            await app.join_chat(chat_id)
-            print(f"Berhasil bergabung ke {chat_id}")
+            await app.join_chat(chat)
+            print(f"✅ Berhasil bergabung ke {chat}")
         except Exception as e:
-            print(f"Gagal bergabung ke {chat_id}: {e}")
+            print(f"❌ Gagal bergabung ke {chat}: {e}")
+
+async def main():
+    await app.start()
+    print("Bot sudah aktif!")
+    await join_target_chats()
+
+    print("Bot siap menerima pesan.")
+    await app.idle()
+    await app.stop()
 
 if __name__ == "__main__":
     asyncio.run(main())
