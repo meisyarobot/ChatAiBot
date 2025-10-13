@@ -1,0 +1,6 @@
+navygram
+tgcrypto
+google-generativeai
+httpx
+aiohttp
+norsodikin
