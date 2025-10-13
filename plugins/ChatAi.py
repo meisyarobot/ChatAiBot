@@ -1,7 +1,6 @@
 from pyrogram import filters, enums
 from pyrogram.types import Message
 import google.generativeai as genai
-#import app
 from config import *
 
 model = genai.GenerativeModel("gemini-2.0-flash-001")
@@ -15,7 +14,6 @@ def gaya_gaul(text: str) -> str:
 
 @app.on_message(~filters.me & ~filters.bot)
 async def chat_ai(_, message: Message):
-    # Ambil data dari app
     data = getattr(app, "data", {"blacklist": [], "allowed_groups": []})
     ai_active = getattr(app, "ai_active", True)
     
