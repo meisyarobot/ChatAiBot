@@ -108,6 +108,9 @@ def auto_update_all():
     update_extra_plugins()
 
 def load_plugins():
+    import importlib
+    import os
+    import sys
     sys.path.append(os.path.abspath("."))
     for folder in ["plugins", "extra_plugins"]:
         if not os.path.exists(folder):
@@ -118,10 +121,12 @@ def load_plugins():
                 moduleref = f"{folder.replace('/', '.')}.{modulename}"
                 try:
                     mod = importlib.import_module(moduleref)
-                    setattr(mod, "app", app)
+                    if hasattr(mod, "register"):
+                        mod.register(app)
                     print(f"✅ Plugin dimuat: {folder}/{filename}")
                 except Exception as e:
                     print(f"⚠️ Gagal memuat {folder}/{filename}: {e}")
+
 
 
 def gaya_gaul(text: str) -> str:
