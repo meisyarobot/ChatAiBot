@@ -93,13 +93,6 @@ app.data = load_data()
 app.ai_active = load_status()
 app.config = {"DEV": DEV, "OWNER": OWNER}
 
-sys.path.append(os.path.abspath("plugins"))
-try:
-    import plugins
-    plugins.register(app)
-except Exception as e:
-    print(f"⚠️ Gagal load plugins: {e}")
-
 from pyrogram import filters
 from pyrogram.types import Message
 
