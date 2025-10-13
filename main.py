@@ -1,10 +1,3 @@
-"""
-CHAT AI BOT: MEISYAROBOT (https://github.com/Meisyarobot/ChatAiBot)
-_____: https://t.me/boyschell
-_____: https://t.me/memekcode
-Yang ganti atau hapus kredit pantatnya bisulan tujuh turunan.
-"""
-
 import os
 import sys
 import json
@@ -13,11 +6,9 @@ import asyncio
 import importlib
 import shutil
 import subprocess
-from datetime import datetime
 from pyrogram import Client, filters, enums
 from pyrogram.types import Message
 from dotenv import load_dotenv
-import re
 import google.generativeai as genai
 
 load_dotenv()
@@ -26,7 +17,6 @@ API_ID = int(os.getenv("API_ID"))
 API_HASH = os.getenv("API_HASH")
 SESSION_STRING = os.getenv("SESSION_STRING")
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
-GROUP_TARGET = int(os.getenv("GROUP_TARGET"))
 DEV = int(os.getenv("DEV"))
 OWNER = os.getenv("OWNER", "@boyschell")
 
@@ -35,10 +25,8 @@ EXTRA_PLUGIN_DIR = "extra_plugins"
 DATA_FILE = "data.json"
 STATUS_FILE = "status.json"
 
-
 genai.configure(api_key=GEMINI_API_KEY)
 model = genai.GenerativeModel("gemini-2.0-flash-001")
-
 
 def save_json(path, data):
     with open(path, "w") as f:
@@ -51,13 +39,11 @@ def load_json(path, default=None):
         with open(path, "r") as f:
             return json.load(f)
     except json.JSONDecodeError:
-        print(f"⚠️ File {path} rusak, membuat ulang dengan default.")
         save_json(path, default or {})
         return default or {}
 
 def load_status():
-    data = load_json(STATUS_FILE, {"ai_active": True})
-    return data.get("ai_active", True)
+    return load_json(STATUS_FILE, {"ai_active": True}).get("ai_active", True)
 
 def save_status(value: bool):
     save_json(STATUS_FILE, {"ai_active": value})
@@ -74,32 +60,19 @@ def run_command(cmd: str) -> str:
     except subprocess.CalledProcessError as e:
         return e.output.decode().strip()
 
-
 app = Client("ChatAiBot", api_id=API_ID, api_hash=API_HASH, session_string=SESSION_STRING)
 ai_active = load_status()
 data = load_data()
 
-
 def update_main_repo():
     print("🔄 Mengecek update repo utama...")
-    result = run_command("git pull")
-    print(result)
+    print(run_command("git pull"))
 
 def update_extra_plugins():
     if os.path.exists(EXTRA_PLUGIN_DIR):
-        try:
-            print(f"🗑️ Menghapus folder {EXTRA_PLUGIN_DIR} lama...")
-            shutil.rmtree(EXTRA_PLUGIN_DIR)
-        except Exception as e:
-            print(f"⚠️ Gagal menghapus folder lama: {e}")
-            return
-    try:
-        print(f"📥 Clone ulang extra_plugins dari {EXTRA_PLUGIN_REPO}...")
-        result = run_command(f"git clone {EXTRA_PLUGIN_REPO} {EXTRA_PLUGIN_DIR}")
-        print(result)
-    except Exception as e:
-        print(f"❌ Clone gagal: {e}")
-        raise
+        shutil.rmtree(EXTRA_PLUGIN_DIR)
+    print(f"📥 Clone ulang extra_plugins dari {EXTRA_PLUGIN_REPO}...")
+    print(run_command(f"git clone {EXTRA_PLUGIN_REPO} {EXTRA_PLUGIN_DIR}"))
 
 def auto_update_all():
     update_main_repo()
@@ -111,9 +84,8 @@ def load_plugins():
         if not os.path.exists(folder):
             continue
         for filename in os.listdir(folder):
-            if filename.endswith(".py"):
-                modulename = filename[:-3]
-                moduleref = f"{folder.replace('/', '.')}.{modulename}"
+            if filename.endswith(".py") and filename != "__init__.py":
+                moduleref = f"{folder.replace('/', '.')}.{filename[:-3]}"
                 try:
                     mod = importlib.import_module(moduleref)
                     if hasattr(mod, "register"):
@@ -131,10 +103,7 @@ def gaya_gaul(text: str) -> str:
 
 @app.on_message(filters.command(["start", "alive"], [".", "/"]))
 async def start_message(_, msg):
-    if msg.from_user.id == DEV:
-        await msg.reply("✅ Bot aktif dan siap digunakan!")
-    else:
-        await msg.reply("🤖 Bot aktif!")
+    await msg.reply("✅ Bot aktif!" if msg.from_user.id != DEV else "✅ Bot aktif dan siap digunakan!")
 
 @app.on_message(filters.user(DEV) & filters.regex(r"^\.su", re.IGNORECASE))
 async def toggle_ai(_, message: Message):
@@ -143,77 +112,46 @@ async def toggle_ai(_, message: Message):
     if text == ".su on":
         ai_active = True
         save_status(True)
-        await message.reply_text("🟢 AI mode aktif lagi bro.")
+        await message.reply_text("🟢 AI mode aktif.")
     elif text == ".su off":
         ai_active = False
         save_status(False)
-        await message.reply_text("🔴 AI mode dimatiin dulu bro.")
+        await message.reply_text("🔴 AI mode nonaktif.")
     elif text == ".su":
-        status = "idup" if load_status() else "mokad"
-        await message.reply_text(f"📘 Status AI sekarang: {status}")
+        await message.reply_text(f"📘 Status AI: {'aktif' if load_status() else 'mati'}")
 
 @app.on_message(filters.user(OWNER) & filters.command("update", prefixes=[".", "/"]))
 async def update_and_restart(_, msg: Message):
-    await msg.reply_text("🔄 Sedang melakukan update semua repo...")
+    await msg.reply_text("🔄 Melakukan update semua repo...")
     try:
         auto_update_all()
-        await msg.reply_text("✅ Update selesai, bot akan restart...")
-        python = sys.executable
-        os.execl(python, python, *sys.argv)
+        await msg.reply_text("✅ Update selesai, bot restart...")
+        os.execl(sys.executable, sys.executable, *sys.argv)
     except Exception as e:
-        await msg.reply_text(f"❌ Terjadi kesalahan saat update: {e}")
+        await msg.reply_text(f"❌ Error: {e}")
 
 async def notify_owner():
     try:
-        await app.send_message(OWNER, "🤖 Bot berhasil dihidupkan dan plugin sudah diperbarui.")
-        print(f"📩 Notifikasi dikirim ke {OWNER}")
+        await app.send_message(OWNER, "🤖 Bot berhasil dijalankan dan plugin dimuat.")
     except Exception as e:
-        print(f"⚠️ Gagal mengirim notifikasi ke {OWNER}: {e}")
-
-# LOAD PLUGINS #
-import os
-import sys
-import importlib
-
-app_folders = ["plugins", "extra_plugins"]
-for folder in app_folders:
-    folder_path = os.path.abspath(folder)
-    if os.path.exists(folder_path):
-        sys.path.append(folder_path)
-        for filename in os.listdir(folder_path):
-            if filename.endswith(".py") and filename != "__init__.py":
-                modulename = filename[:-3]
-                moduleref = f"{folder.replace('/', '.')}.{modulename}"
-                try:
-                    mod = importlib.import_module(moduleref)
-                    if hasattr(mod, "register"):
-                        mod.register(app)
-                    print(f"✅ Plugin dimuat: {folder}/{filename}")
-                except Exception as e:
-                    print(f"⚠️ Gagal memuat {folder}/{filename}: {e}")
-
-# CHAT AI #
+        print(f"⚠️ Gagal kirim notifikasi: {e}")
 
 @app.on_message(~filters.me & ~filters.bot)
 async def main_handler(client: Client, message: Message):
     if message.text and message.text.startswith((".", "/")):
         return
-    if not load_status():
+
+    if not ai_active:
         return
+
     user = message.from_user
-    if not user or user.is_bot:
+    if not user or user.is_bot or user.id in data.get("blacklist", []):
         return
-    if user.id in data["blacklist"]:
-        print(f"🚫 {user.first_name} diblacklist, di-skip.")
-        return
+
     if message.chat.type in ["group", "supergroup"]:
-        if data["allowed_groups"] and message.chat.id not in data["allowed_groups"]:
+        if data.get("allowed_groups") and message.chat.id not in data["allowed_groups"]:
             print(f"🚷 Grup {message.chat.title} belum di-whitelist.")
             return
-    elif message.chat.type == "private":
-        pass
-    else:
-        return
 
     try:
         user_text = message.text
@@ -221,7 +159,6 @@ async def main_handler(client: Client, message: Message):
             return
 
         await message.reply_chat_action(enums.ChatAction.TYPING)
-
         prompt = f"""
         Balas pesan ini kayak anak muda, santai, gaul dan kekinian.
         Maksimal 2 kalimat tanpa emoji. Jangan tunjukkan kalau AI. Bercanda atau logika seperti manusia.
@@ -233,36 +170,16 @@ async def main_handler(client: Client, message: Message):
         jawaban_gaul = gaya_gaul(answer)
         await message.reply_text(jawaban_gaul, quote=True)
         print(f"💬 [{user.first_name}] {user_text} → {jawaban_gaul}")
+
     except Exception as e:
-        print(f"❌ Error: {e}")
+        print(f"❌ Error AI: {e}")
 
-
-        response = model.generate_content(prompt)
-        answer = getattr(response, "text", None) or response.candidates[0].content.parts[0].text
-        jawaban_gaul = gaya_gaul(answer)
-        await message.reply_text(jawaban_gaul, quote=True)
-        print(f"💬 [{user.first_name}] {user_text} → {jawaban_gaul}")
-    except Exception as e:
-        print(f"❌ Error: {e}")
-
-async def runner():
-    await app.start()
-    await notify_owner()
-    stop_event = asyncio.Event()
-    def _stop(*_): stop_event.set()
-    for sig in (signal.SIGINT, signal.SIGTERM):
-        asyncio.get_event_loop().add_signal_handler(sig, _stop)
-    print("🕒 Bot sedang berjalan. Tekan Ctrl+C untuk berhenti.")
-    await stop_event.wait()
-    await app.stop()
-    print("🛑 Bot dimatikan dengan aman.")
 
 if __name__ == "__main__":
     print("🚀 Menjalankan bot...")
     auto_update_all()
     load_plugins()
-    print("✅ Semua plugin dimuat. Bot sedang berjalan...")
-
+    print("✅ Semua plugin dimuat. Bot berjalan...")
     try:
         app.run()
     except KeyboardInterrupt:
