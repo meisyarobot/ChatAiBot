@@ -65,15 +65,15 @@ def update_main_repo():
     print("🔄 Mengecek update repo utama...")
     print(run_command("git pull"))
 
-def update_extra_plugins():
-    if os.path.exists(EXTRA_PLUGIN_DIR):
-        shutil.rmtree(EXTRA_PLUGIN_DIR)
-    print(f"📥 Clone ulang extra_plugins dari {EXTRA_PLUGIN_REPO}...")
-    print(run_command(f"git clone {EXTRA_PLUGIN_REPO} {EXTRA_PLUGIN_DIR}"))
+#def update_extra_plugins():
+    #if os.path.exists(EXTRA_PLUGIN_DIR):
+        #shutil.rmtree(EXTRA_PLUGIN_DIR)
+    #print(f"📥 Clone ulang extra_plugins dari {EXTRA_PLUGIN_REPO}...")
+    #print(run_command(f"git clone {EXTRA_PLUGIN_REPO} {EXTRA_PLUGIN_DIR}"))
 
 def auto_update_all():
     update_main_repo()
-    update_extra_plugins()
+    #update_extra_plugins()
 
 async def notify_owner(app):
     try:
