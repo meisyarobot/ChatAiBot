@@ -1,8 +1,6 @@
-# plugins/ChatAi.py
 from pyrogram import filters, enums
 from pyrogram.types import Message
 import google.generativeai as genai
-from config import *
 
 model = genai.GenerativeModel("gemini-2.0-flash-001")
 
@@ -13,7 +11,7 @@ def gaya_gaul(text: str) -> str:
     text = text.replace("baik", "sip").replace("oke", "okedeh").replace("benar", "beneran nih?")
     return text.strip()
 
-def init_ai(app):
+def init(app):
     @app.on_message(~filters.me & ~filters.bot)
     async def chat_ai(_, message: Message):
         data = getattr(app, "data", {"blacklist": [], "allowed_groups": []})
@@ -40,7 +38,6 @@ def init_ai(app):
             return
 
         await message.reply_chat_action(enums.ChatAction.TYPING)
-
         prompt = f"""
         Balas pesan ini kayak anak muda, santai, kekinian.
         Maksimal 2 kalimat tanpa emoji. Jangan tunjukkan kalau AI. Bercanda atau logika seperti manusia.
