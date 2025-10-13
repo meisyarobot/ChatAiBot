@@ -18,6 +18,7 @@ import psutil
 import platform
 import shlex
 import asyncio
+import logging
 
 load_dotenv()
 API_ID = int(os.getenv("API_ID"))
@@ -377,11 +378,20 @@ async def auto_reply(client: Client, message: Message):
     except Exception as e:
         print(f"❌ Error auto-reply: {e}")
 
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(levelname)s - %(message)s"
+)
+logger = logging.getLogger(__name__)
+
 TARGET_CHATS = [
     "@publickchell",
     "@chellsupport",
     "@store_mmk"
 ]
+
+global_task = []
 
 async def auto_join_chats():
     invalid_or_already = []
@@ -416,14 +426,6 @@ async def start_background_tasks():
         task = asyncio.create_task(t)
         global_task.append(task)
     logger.info(f"Started {len(background_tasks)} background tasks")
-
-async def stop_all_tasks():
-    tasks = [t for t in asyncio.all_tasks() if t is not asyncio.current_task()]
-    logger.info(f"📌 Total task yang akan dihentikan: {len(tasks)}")
-    for task in tasks:
-        if not task.done():
-            task.cancel()
-    await asyncio.sleep(1)
 
 async def main():
     try:
