@@ -1,0 +1,7 @@
+VPS ( Virtual Private Server)
+
+1. git clone https://github.com/meisyarobot/ChatAiBot
+2. Screen -S ChatAiBot
+3. python3 -m venv venv
+4. source venv/bin/act*
+5. bash start.sh
