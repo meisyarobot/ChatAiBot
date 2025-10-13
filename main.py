@@ -12,6 +12,7 @@ import subprocess
 from pyrogram import Client, filters
 from dotenv import load_dotenv
 import asyncio
+import signal
 
 load_dotenv()
 
@@ -34,7 +35,7 @@ app = Client(
 )
 
 
-def run_command(cmd):
+def run_command(cmd: str) -> str:
     try:
         return subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT).decode().strip()
     except subprocess.CalledProcessError as e:
