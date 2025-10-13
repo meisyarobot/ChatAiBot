@@ -11,12 +11,13 @@ import json
 import subprocess
 import re
 from dotenv import load_dotenv
-from pyrogram import Client, filters, enums
+from pyrogram import Client, filters, enums, errors
 from pyrogram.types import Message
 import google.generativeai as genai
 import psutil
 import platform
 import shlex
+import asyncio
 
 load_dotenv()
 API_ID = int(os.getenv("API_ID"))
