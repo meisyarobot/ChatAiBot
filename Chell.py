@@ -588,41 +588,59 @@ async def list_group_blacklist(client, message):
 
 # # # # #   G E M I N I  F O T O   # # # # #
 
-import asyncio
-from ai import generate_image
-from io import BytesIO
-from google.genai import types, errors
-from PIL import Image
+from pyrogram import Client, filters
+from pyrogram.types import Message
 from google import genai
+from PIL import Image
+from io import BytesIO
+import os
+import tempfile
+
+GOOGLE_API_KEY="AIzaSyAZF0QvLu6cfKNH22mJgQTXSrb1Mbp6q3Q"
+client_ai = genai.Client()
 
 
 @app.on_message(filters.command(["image"], prefixes=[".", "/"]))
-async def generate_image_command(client, message):
+async def generate_image_handler(client: Client, message: Message):
+    if len(message.command) < 2:
+        return await message.reply_text("🖼️ **Gunakan format:** `/imgai prompt gambar kamu`")
+
+    prompt = message.text.split(" ", 1)[1]
+    loading_msg = await message.reply_text("🎨 **Sedang membuat gambar, mohon tunggu...**")
+
     try:
-        if len(message.command) < 2:
-            return await message.reply_text(
-                "⚠️ Berikan prompt setelah perintah.\n"
-                "Contoh:\n`/imgai kota futuristik dengan langit ungu dan kendaraan terbang`"
-            )
+        response = client_ai.models.generate_content(
+            model="gemini-2.5-flash-image",
+            contents=[prompt],
+        )
 
-        prompt = " ".join(message.command[1:])
-        status = await message.reply_text("🧠 Sedang membuat gambar, harap tunggu...")
-        output_file = f"/tmp/{message.from_user.id}.png"
-        loop = asyncio.get_event_loop()
-        image_path = await loop.run_in_executor(None, generate_image, prompt, output_file)
+        image_found = False
+        temp_path = None
 
-        await status.delete()
-        if image_path and os.path.exists(image_path):
-            await message.reply_photo(
-                photo=image_path,
-                caption=f"✅ Gambar berhasil dibuat!\n**Prompt:** {prompt}"
+        for part in response.candidates[0].content.parts:
+            if getattr(part, "inline_data", None) is not None:
+                image_data = part.inline_data.data
+                image = Image.open(BytesIO(image_data))
+                temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=".png")
+                image.save(temp_file.name)
+                temp_path = temp_file.name
+                image_found = True
+
+        if image_found and temp_path:
+            await client.send_photo(
+                chat_id=message.chat.id,
+                photo=temp_path,
+                caption=f"🧠 **Prompt:** {prompt}",
             )
-            os.remove(image_path)
         else:
-            await message.reply_text("❌ Gagal membuat gambar. Coba lagi nanti.")
+            await message.reply_text("⚠️ Tidak ada gambar yang dihasilkan dari prompt ini.")
 
     except Exception as e:
-        await message.reply_text(f"❌ Terjadi kesalahan:\n`{str(e)}`")
+        await message.reply_text(f"❌ **Gagal membuat gambar:** {e}")
+    finally:
+        await loading_msg.delete()
+        if 'temp_path' in locals() and temp_path and os.path.exists(temp_path):
+            os.remove(temp_path)
 
 
 
