@@ -737,7 +737,9 @@ async def download_youtube(query, message, format_type):
 
     try:
         loop = asyncio.get_event_loop()
-        data = await loop.run_in_executor(None, lambda: yt_dlp.YoutubeDL(ydl_opts_search).extract_info(query, download=False))
+        data = await loop.run_in_executor(
+            None, lambda: yt_dlp.YoutubeDL(ydl_opts_search).extract_info(query, download=False)
+        )
     except Exception as e:
         return await status.edit_text(f"❌ Gagal mencari video:\n`{e}`")
 
@@ -746,6 +748,12 @@ async def download_youtube(query, message, format_type):
 
     title = data.get("title", "Tanpa Judul")
     url = data.get("webpage_url")
+    duration = data.get("duration", 0)
+    views = data.get("view_count", 0)
+    uploader = data.get("uploader", "Tidak diketahui")
+
+    durasi_str = f"{duration // 60}:{duration % 60:02d}" if duration else "Tidak diketahui"
+    views_str = f"{views:,}".replace(",", ".") if views else "Tidak diketahui"
 
     await status.edit_text(f"📥 Menyiapkan unduhan...\n🎬 **{title}**")
 
@@ -765,7 +773,9 @@ async def download_youtube(query, message, format_type):
             text = f"📥 Mengunduh {format_type.upper()}...\n{progress_bar} {percent}"
 
             try:
-                asyncio.run_coroutine_threadsafe(progress_msg[0].edit_text(text), asyncio.get_event_loop())
+                asyncio.run_coroutine_threadsafe(
+                    progress_msg[0].edit_text(text), asyncio.get_event_loop()
+                )
             except:
                 pass
 
@@ -779,19 +789,25 @@ async def download_youtube(query, message, format_type):
         }
 
         if format_type == "mp3":
-            ydl_opts.update({
-                "format": "bestaudio/best",
-                "postprocessors": [{
-                    "key": "FFmpegExtractAudio",
-                    "preferredcodec": "mp3",
-                    "preferredquality": "192",
-                }],
-            })
+            ydl_opts.update(
+                {
+                    "format": "bestaudio/best",
+                    "postprocessors": [
+                        {
+                            "key": "FFmpegExtractAudio",
+                            "preferredcodec": "mp3",
+                            "preferredquality": "192",
+                        }
+                    ],
+                }
+            )
         else:
             ydl_opts.update({"format": "best[ext=mp4]/best"})
 
         loop = asyncio.get_event_loop()
-        info = await loop.run_in_executor(None, lambda: yt_dlp.YoutubeDL(ydl_opts).extract_info(url, download=True))
+        info = await loop.run_in_executor(
+            None, lambda: yt_dlp.YoutubeDL(ydl_opts).extract_info(url, download=True)
+        )
         filename = yt_dlp.YoutubeDL(ydl_opts).prepare_filename(info)
         if format_type == "mp3":
             filename = os.path.splitext(filename)[0] + ".mp3"
@@ -802,18 +818,28 @@ async def download_youtube(query, message, format_type):
     if not os.path.exists(filename):
         return await progress_msg[0].edit_text("❌ File tidak ditemukan setelah download.")
 
+    caption = (
+        f"🎵 **Judul:** {title}\n"
+        f"👤 **Channel:** {uploader}\n"
+        f"⏱️ **Durasi:** {durasi_str}\n"
+        f"👁️ **Ditonton:** {views_str} kali\n"
+        f"🔗 [Tonton di YouTube]({url})"
+        f" Create By : @boyschell"
+    )
+
     try:
         await progress_msg[0].edit_text("✅ Selesai diunduh, mengirim ke Telegram...")
         if format_type == "mp3":
-            await message.reply_audio(audio=filename, title=info.get("title"), performer=info.get("uploader"))
+            await message.reply_audio(audio=filename, caption=caption, title=title, performer=uploader)
         else:
-            await message.reply_video(video=filename, caption=f"🎥 {info.get('title')}")
+            await message.reply_video(video=filename, caption=caption)
         await progress_msg[0].delete()
     except Exception as e:
         await progress_msg[0].edit_text(f"⚠️ Gagal mengirim ke Telegram:\n`{e}`")
     finally:
         if os.path.exists(filename):
             os.remove(filename)
+            
 
 @app.on_message(filters.command("song", [".", "/"]))
 async def song_handler(client, message):
@@ -829,7 +855,6 @@ async def vsong_handler(client, message):
         return await message.reply_text("❌ Masukkan judul video!\nContoh: `.vsong bernadya untungnya`")
     query = " ".join(message.command[1:])
     await download_youtube(query, message, "mp4")
-
         
 
 # # # # #   A I  C H A T   B O T   # # # # #
