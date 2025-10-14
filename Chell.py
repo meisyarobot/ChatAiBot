@@ -650,7 +650,7 @@ import os
 from dotenv import load_dotenv
 
 load_dotenv()
-BOTCAHX_API_KEY = os.getenv("BOTCAHX_API_KEY", "nGozZmON")
+BOTCAHX_API_KEY = os.getenv("BOTCAHX_API_KEY", "kenapanan")
 
 
 CECAN_ENDPOINTS = {
