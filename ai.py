@@ -2,6 +2,7 @@ from google import genai
 from google.genai import types
 from PIL import Image
 from io import BytesIO
+import os
 
 GEMINI_API_KEY = os.getenv("AIzaSyAZF0QvLu6cfKNH22mJgQTXSrb1Mbp6q3Q")
 
