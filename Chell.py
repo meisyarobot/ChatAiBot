@@ -722,66 +722,16 @@ from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton, CallbackQ
 from youtubesearchpython import VideosSearch
 from yt import *
 
-COOKIES_FILE = "cookies.txt"
-DOWNLOAD_DIR = "downloads"
-os.makedirs(DOWNLOAD_DIR, exist_ok=True)
 
 
-@app.on_message(filters.command(["yt"], prefixes=[".", "/"]))
-async def dl_command(client, message):
-    if len(message.command) < 2:
-        return await message.reply_text("❌ Contoh:\n`.dl bernadya untungnya hidup harus tetap berjalan`")
-
-    query = " ".join(message.command[1:])
-    msg = await message.reply_text(f"🔍 Mencari video untuk: `{query}`")
-
-    try:
-        search = VideosSearch(query, limit=1)
-        result = search.result()["result"]
-        if not result:
-            return await msg.edit_text("❌ Tidak ditemukan hasil untuk pencarian itu.")
-
-        video = result[0]
-        title = video["title"]
-        url = video["link"]
-        duration = video.get("duration", "N/A")
-
-        buttons = [
-            [
-                InlineKeyboardButton("🎧 MP3", callback_data=f"dl|mp3|{url}"),
-                InlineKeyboardButton("🎥 MP4", callback_data=f"dl|mp4|{url}")
-            ]
-        ]
-        await msg.edit_text(
-            f"🎬 **{title}**\n🕒 Durasi: `{duration}`\n\nPilih format unduhan:",
-            reply_markup=InlineKeyboardMarkup(buttons)
-        )
-
-    except Exception as e:
-        await msg.edit_text(f"❌ Error: `{e}`")
+@app.on_message(filters.command(["vsong"], prefixes=[".", "/"]))
+async def _(client, message):
+    await vsong_cmd(client, message)
 
 
-@app.on_callback_query(filters.regex(r"^dl\|(mp3|mp4)\|"))
-async def download_format(client, cq: CallbackQuery):
-    fmt, url = cq.data.split("|")[1:]
-    msg = await cq.message.edit_text("⏳ Sedang menyiapkan unduhan...")
-
-    try:
-        info, file_path = await safe_download(url, fmt)
-        title = info.get("title", "Tanpa Judul")
-        caption = f"✅ **{title}**\n🎧 Format: `{fmt.upper()}`"
-
-        if fmt == "mp3":
-            await client.send_audio(chat_id=cq.message.chat.id, audio=file_path, caption=caption)
-        else:
-            await client.send_video(chat_id=cq.message.chat.id, video=file_path, caption=caption)
-
-        os.remove(file_path)
-        await msg.delete()
-
-    except Exception as e:
-        await msg.edit_text(f"❌ Gagal mengunduh:\n`{e}`")
-
+@app.on_message(filters.command(["song"], prefixes=[".", "/"]))
+async def _(client, message):
+    await song_cmd(client, message)
 
 
 
