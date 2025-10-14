@@ -2,6 +2,7 @@ import os
 import requests
 from pyrogram import Client, filters
 from dotenv import load_dotenv
+import hashlib
 
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 
