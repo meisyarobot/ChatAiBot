@@ -586,6 +586,28 @@ async def list_group_blacklist(client, message):
 
 
 
+# # # # #   G E M I N I  F O T O   # # # # #
+
+
+from ai import generate_image
+
+@app.on_message(filters.user(DEV) & filters.command(["listbl"], prefixes=[".", "/"]))
+async def image_command(client, message):
+    if len(message.command) < 2:
+        await message.reply_text("❌ Silakan masukkan prompt. Contoh: /image kucing lucu")
+        return
+    
+    prompt = " ".join(message.command[1:])
+    msg = await message.reply_text("🖌️ Membuat gambar...")
+    
+    image_url = generate_image(prompt)
+    if image_url:
+        await message.reply_photo(image_url)
+        await msg.delete()
+    else:
+        await msg.edit("❌ Gagal membuat gambar.")
+
+
 
 # # # # #   A I  C H A T   B O T   # # # # #
 
