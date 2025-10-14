@@ -9,7 +9,7 @@ from google.genai import types
 
 GEMINI_API_KEY = os.getenv("AIzaSyAZF0QvLu6cfKNH22mJgQTXSrb1Mbp6q3Q")
 
-client = genai.Client(api_key=AIzaSyAZF0QvLu6cfKNH22mJgQTXSrb1Mbp6q3Q)
+client = genai.Client(api_key=GEMINI_API_KEY)
 CACHE_DIR = "cache"
 os.makedirs(CACHE_DIR, exist_ok=True)
 
