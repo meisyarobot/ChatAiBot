@@ -717,92 +717,128 @@ async def cecan_handler(client, message):
 # # # # # # # # # # # #  Y O U T U B E    # # # # # # # # # # # #
 
 
+
 import os
 import asyncio
-from yt_dlp import YoutubeDL
+import yt_dlp
 from pyrogram import Client, filters
-from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery
-from youtubesearchpython import VideosSearch
-from yt import *
+from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 
+COOKIES_PATH = "cookies.txt" 
 
-
-@app.on_message(filters.command(["vsong"], prefixes=[".", "/"]))
-async def vsong_cmd(client, message):
+@app.on_message(filters.command("yt", [".", "/"]))
+async def youtube_download(client, message):
     if len(message.command) < 2:
-        return await message.reply_text("❌ Masukkan judul video yang ingin diunduh.")
-    infomsg = await message.reply_text("🔍 Mencari video...", quote=False)
+        return await message.reply_text("❌ Masukkan judul video!\nContoh: `.dl bernadya untungnya`")
+
+    query = " ".join(message.command[1:])
+    status = await message.reply_text("🔎 Mencari video di YouTube...")
+
+    ydl_opts_search = {
+        "quiet": True,
+        "skip_download": True,
+        "cookiefile": COOKIES_PATH if os.path.exists(COOKIES_PATH) else None,
+        "default_search": "ytsearch1",
+    }
 
     try:
-        search = VideosSearch(message.text.split(None, 1)[1], limit=1).result()["result"][0]
-        link = f"https://youtu.be/{search['id']}"
+        loop = asyncio.get_event_loop()
+        data = await loop.run_in_executor(None, lambda: yt_dlp.YoutubeDL(ydl_opts_search).extract_info(query, download=False))
     except Exception as e:
-        return await infomsg.edit(f"❌ Gagal mencari video:\n`{e}`")
+        return await status.edit_text(f"❌ Gagal mencari video:\n`{e}`")
+
+    if "entries" in data:
+        data = data["entries"][0]
+
+    title = data.get("title", "Tanpa Judul")
+    url = data.get("webpage_url")
+    thumb = data.get("thumbnail", "")
+    duration = data.get("duration_string", "Unknown")
+
+    buttons = InlineKeyboardMarkup([
+        [
+            InlineKeyboardButton("🎧 MP3", callback_data=f"ytdl_mp3|{url}"),
+            InlineKeyboardButton("🎥 MP4", callback_data=f"ytdl_mp4|{url}")
+        ]
+    ])
+
+    caption = f"**🎵 Judul:** {title}\n⏱️ Durasi: {duration}\n🔗 [Tonton di YouTube]({url})"
+    await status.delete()
+    await message.reply_photo(photo=thumb, caption=caption, reply_markup=buttons)
+
+
+
+@app.on_callback_query(filters.regex(r"^ytdl_"))
+async def ytdl_callback(client, cq):
+    data = cq.data.split("|")
+    format_type, url = data[0].replace("ytdl_", ""), data[1]
+    msg = await cq.message.reply_text("📥 Menyiapkan unduhan...")
+
+    progress_msg = [msg]
+
+    def progress_hook(d):
+        if d["status"] == "downloading":
+            percent = d.get("_percent_str", "").strip()
+            try:
+                float_percent = float(percent.replace("%", ""))
+            except:
+                float_percent = 0
+
+            bar_filled = int(float_percent // 5)
+            bar_empty = 20 - bar_filled
+            progress_bar = f"[{'█' * bar_filled}{'░' * bar_empty}]"
+            text = f"📥 Mengunduh {format_type.upper()} {progress_bar} {percent}"
+
+            try:
+                asyncio.run_coroutine_threadsafe(progress_msg[0].edit_text(text), asyncio.get_event_loop())
+            except Exception:
+                pass
+
+    filename = None
+    try:
+        ydl_opts = {
+            "quiet": True,
+            "cookiefile": COOKIES_PATH if os.path.exists(COOKIES_PATH) else None,
+            "outtmpl": "%(title)s.%(ext)s",
+            "progress_hooks": [progress_hook],
+        }
+
+        if format_type == "mp3":
+            ydl_opts.update({
+                "format": "bestaudio/best",
+                "postprocessors": [{
+                    "key": "FFmpegExtractAudio",
+                    "preferredcodec": "mp3",
+                    "preferredquality": "192",
+                }],
+            })
+        else:
+            ydl_opts.update({"format": "best"})
+
+        loop = asyncio.get_event_loop()
+        info = await loop.run_in_executor(None, lambda: yt_dlp.YoutubeDL(ydl_opts).extract_info(url, download=True))
+        filename = yt_dlp.YoutubeDL(ydl_opts).prepare_filename(info)
+        if format_type == "mp3":
+            filename = os.path.splitext(filename)[0] + ".mp3"
+
+    except Exception as e:
+        return await msg.edit_text(f"❌ Gagal mengunduh:\n`{e}`")
+
+    if not os.path.exists(filename):
+        return await msg.edit_text("❌ File tidak ditemukan setelah download.")
 
     try:
-        file_name, title, url, duration, views, channel, thumb, data_ytp = await YoutubeDownload(link, as_video=True)
+        await msg.edit_text("✅ Selesai diunduh, mengirim ke Telegram...")
+        if format_type == "mp3":
+            await cq.message.reply_audio(audio=filename, title=info.get("title"), performer=info.get("uploader"))
+        else:
+            await cq.message.reply_video(video=filename, caption=f"🎥 {info.get('title')}")
+        await msg.delete()
     except Exception as e:
-        return await infomsg.edit(f"❌ Gagal download video:\n`{e}`")
-
-    thumbnail = wget.download(thumb)
-    await client.send_video(
-        chat_id=message.chat.id,
-        video=file_name,
-        thumb=thumbnail,
-        file_name=title,
-        duration=duration,
-        supports_streaming=True,
-        caption=data_ytp.format(
-            "ᴠɪᴅᴇᴏ", title, timedelta(seconds=duration), views, channel, url, client.me.mention
-        ),
-        progress=progress,
-        progress_args=(infomsg, time(), "📥 Mengunggah video...", f"{search['id']}.mp4"),
-        reply_to_message_id=message.id,
-    )
-
-    await infomsg.delete()
-    for f in (thumbnail, file_name):
-        if os.path.exists(f):
-            os.remove(f)
-
-
-@app.on_message(filters.command(["song"], prefixes=[".", "/"]))
-async def song_cmd(client, message):
-    if len(message.command) < 2:
-        return await message.reply_text("❌ Masukkan judul lagu yang ingin diunduh.")
-    infomsg = await message.reply_text("🔍 Mencari lagu...", quote=False)
-
-    try:
-        search = VideosSearch(message.text.split(None, 1)[1], limit=1).result()["result"][0]
-        link = f"https://youtu.be/{search['id']}"
-    except Exception as e:
-        return await infomsg.edit(f"❌ Gagal mencari lagu:\n`{e}`")
-
-    try:
-        file_name, title, url, duration, views, channel, thumb, data_ytp = await YoutubeDownload(link, as_video=False)
-    except Exception as e:
-        return await infomsg.edit(f"❌ Gagal download audio:\n`{e}`")
-
-    thumbnail = wget.download(thumb)
-    await client.send_audio(
-        chat_id=message.chat.id,
-        audio=file_name,
-        thumb=thumbnail,
-        file_name=title,
-        performer=channel,
-        duration=duration,
-        caption=data_ytp.format(
-            "ᴀᴜᴅɪᴏ", title, timedelta(seconds=duration), views, channel, url, client.me.mention
-        ),
-        progress=progress,
-        progress_args=(infomsg, time(), "📥 Mengunggah audio...", f"{search['id']}.mp3"),
-        reply_to_message_id=message.id,
-    )
-
-    await infomsg.delete()
-    for f in (thumbnail, file_name):
-        if os.path.exists(f):
-            os.remove(f)
+        await msg.edit_text(f"⚠️ Gagal mengirim ke Telegram:\n`{e}`")
+    finally:
+        if os.path.exists(filename):
+            os.remove(filename)
 
 
 # # # # #   A I  C H A T   B O T   # # # # #
