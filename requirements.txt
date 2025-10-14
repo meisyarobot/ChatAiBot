@@ -5,4 +5,7 @@ httpx
 aiohttp
 norsodikin
 psutil
+pillow
 dotenv
+yt-dlp
+youtube-search-python
