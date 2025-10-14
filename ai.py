@@ -19,7 +19,6 @@ def generate_image(prompt: str, output_filename: str):
             prompt=prompt,
             config=types.GenerateImagesConfig(
                 number_of_images=1,
-                image_size="1024x1024",
             ),
         )
 
