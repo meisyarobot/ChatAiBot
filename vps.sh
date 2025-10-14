@@ -9,7 +9,7 @@ PYTHON_VERSION="python3"
 VENV_DIR="venv"
 REQUIREMENTS="requirements.txt"
 MAIN_FILE="Chell.py"
-SCREEN_NAME="autochat"
+SCREEN_NAME="AiBot"
 VENV_ACTIVATE="$VENV_DIR/bin/activate"
 
 echo "====================================="
@@ -18,6 +18,7 @@ echo "====================================="
 
 echo "✅ Memeriksa prasyarat sistem..."
 sudo apt update -y >/dev/null 2>&1
+sudo apt install ffmpeg -y
 
 if ! command -v $PYTHON_VERSION &> /dev/null; then
     echo "❌ Python3 belum terpasang. Menginstal..."
