@@ -588,30 +588,38 @@ async def list_group_blacklist(client, message):
 
 # # # # #   G E M I N I  F O T O   # # # # #
 
-
+import asyncio
 from ai import generate_image
 from io import BytesIO
 from google.genai import types, errors
 from PIL import Image
 from google import genai
 
+
 @app.on_message(filters.command(["image"], prefixes=[".", "/"]))
 async def generate_image_command(client, message):
     try:
         if len(message.command) < 2:
-            return await message.reply_text("⚠️ Berikan prompt setelah perintah.\nContoh:\n`/imgai pemandangan langit neon di malam hari`")
+            return await message.reply_text(
+                "⚠️ Berikan prompt setelah perintah.\n"
+                "Contoh:\n`/imgai kota futuristik dengan langit ungu dan kendaraan terbang`"
+            )
 
         prompt = " ".join(message.command[1:])
-        status = await message.reply_text("🖼️ Sedang membuat gambar, tunggu sebentar...")
-
+        status = await message.reply_text("🧠 Sedang membuat gambar, harap tunggu...")
         output_file = f"/tmp/{message.from_user.id}.png"
         loop = asyncio.get_event_loop()
-        await loop.run_in_executor(None, generate_image, prompt, output_file)
+        image_path = await loop.run_in_executor(None, generate_image, prompt, output_file)
 
-        await message.reply_photo(photo=output_file, caption=f"✅ Gambar berhasil dibuat!\n**Prompt:** {prompt}")
         await status.delete()
-
-        os.remove(output_file)
+        if image_path and os.path.exists(image_path):
+            await message.reply_photo(
+                photo=image_path,
+                caption=f"✅ Gambar berhasil dibuat!\n**Prompt:** {prompt}"
+            )
+            os.remove(image_path)
+        else:
+            await message.reply_text("❌ Gagal membuat gambar. Coba lagi nanti.")
 
     except Exception as e:
         await message.reply_text(f"❌ Terjadi kesalahan:\n`{str(e)}`")
