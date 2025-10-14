@@ -714,6 +714,9 @@ async def cecan_handler(client, message):
 
 
 
+# # # # # # # # # # # #  Y O U T U B E    # # # # # # # # # # # #
+
+
 import os
 import asyncio
 from yt_dlp import YoutubeDL
@@ -725,14 +728,81 @@ from yt import *
 
 
 @app.on_message(filters.command(["vsong"], prefixes=[".", "/"]))
-async def _(client, message):
-    await vsong_cmd(client, message)
+async def vsong_cmd(client, message):
+    if len(message.command) < 2:
+        return await message.reply_text("❌ Masukkan judul video yang ingin diunduh.")
+    infomsg = await message.reply_text("🔍 Mencari video...", quote=False)
+
+    try:
+        search = VideosSearch(message.text.split(None, 1)[1], limit=1).result()["result"][0]
+        link = f"https://youtu.be/{search['id']}"
+    except Exception as e:
+        return await infomsg.edit(f"❌ Gagal mencari video:\n`{e}`")
+
+    try:
+        file_name, title, url, duration, views, channel, thumb, data_ytp = await YoutubeDownload(link, as_video=True)
+    except Exception as e:
+        return await infomsg.edit(f"❌ Gagal download video:\n`{e}`")
+
+    thumbnail = wget.download(thumb)
+    await client.send_video(
+        chat_id=message.chat.id,
+        video=file_name,
+        thumb=thumbnail,
+        file_name=title,
+        duration=duration,
+        supports_streaming=True,
+        caption=data_ytp.format(
+            "ᴠɪᴅᴇᴏ", title, timedelta(seconds=duration), views, channel, url, client.me.mention
+        ),
+        progress=progress,
+        progress_args=(infomsg, time(), "📥 Mengunggah video...", f"{search['id']}.mp4"),
+        reply_to_message_id=message.id,
+    )
+
+    await infomsg.delete()
+    for f in (thumbnail, file_name):
+        if os.path.exists(f):
+            os.remove(f)
 
 
 @app.on_message(filters.command(["song"], prefixes=[".", "/"]))
-async def _(client, message):
-    await song_cmd(client, message)
+async def song_cmd(client, message):
+    if len(message.command) < 2:
+        return await message.reply_text("❌ Masukkan judul lagu yang ingin diunduh.")
+    infomsg = await message.reply_text("🔍 Mencari lagu...", quote=False)
 
+    try:
+        search = VideosSearch(message.text.split(None, 1)[1], limit=1).result()["result"][0]
+        link = f"https://youtu.be/{search['id']}"
+    except Exception as e:
+        return await infomsg.edit(f"❌ Gagal mencari lagu:\n`{e}`")
+
+    try:
+        file_name, title, url, duration, views, channel, thumb, data_ytp = await YoutubeDownload(link, as_video=False)
+    except Exception as e:
+        return await infomsg.edit(f"❌ Gagal download audio:\n`{e}`")
+
+    thumbnail = wget.download(thumb)
+    await client.send_audio(
+        chat_id=message.chat.id,
+        audio=file_name,
+        thumb=thumbnail,
+        file_name=title,
+        performer=channel,
+        duration=duration,
+        caption=data_ytp.format(
+            "ᴀᴜᴅɪᴏ", title, timedelta(seconds=duration), views, channel, url, client.me.mention
+        ),
+        progress=progress,
+        progress_args=(infomsg, time(), "📥 Mengunggah audio...", f"{search['id']}.mp3"),
+        reply_to_message_id=message.id,
+    )
+
+    await infomsg.delete()
+    for f in (thumbnail, file_name):
+        if os.path.exists(f):
+            os.remove(f)
 
 
 # # # # #   A I  C H A T   B O T   # # # # #
