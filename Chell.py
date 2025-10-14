@@ -588,7 +588,6 @@ async def list_group_blacklist(client, message):
 
 # # # # #   G E M I N I  F O T O   # # # # #
 
-modelimg = genai.GenerativeModel("gemini-1.5-flash")
 
 from ai import generate_image
 from io import BytesIO
@@ -597,64 +596,25 @@ from PIL import Image
 from google import genai
 
 @app.on_message(filters.command(["image"], prefixes=[".", "/"]))
-async def gemi_handler(client, message):
-    loading_message = None
+async def generate_image_command(client, message):
     try:
-        loading_message = await message.reply_text("**Generating response, please wait...**")
+        if len(message.command) < 2:
+            return await message.reply_text("⚠️ Berikan prompt setelah perintah.\nContoh:\n`/imgai pemandangan langit neon di malam hari`")
 
-        if len(message.text.strip()) <= 5:
-            await message.reply_text("**Provide a prompt after the command.**")
-            return
+        prompt = " ".join(message.command[1:])
+        status = await message.reply_text("🖼️ Sedang membuat gambar, tunggu sebentar...")
 
-        prompt_text = message.text.split(maxsplit=1)[1]
+        output_file = f"/tmp/{message.from_user.id}.png"
+        loop = asyncio.get_event_loop()
+        await loop.run_in_executor(None, generate_image, prompt, output_file)
 
-        try:
-            response = modelimg.generate_content(contents=[prompt_text])
-        except errors.ClientError as e:
-            await message.reply_text(f"**API Error: {e}**")
-            return
+        await message.reply_photo(photo=output_file, caption=f"✅ Gambar berhasil dibuat!\n**Prompt:** {prompt}")
+        await status.delete()
 
-        response_text = response.candidates[0].content[0].text if response.candidates else "No response."
-        if len(response_text) > 4000:
-            for i in range(0, len(response_text), 4000):
-                await message.reply_text(response_text[i:i+4000])
-        else:
-            await message.reply_text(response_text)
+        os.remove(output_file)
 
     except Exception as e:
-        await message.reply_text(f"**An error occurred: {str(e)}**")
-    finally:
-        if loading_message:
-            await loading_message.delete()
-
-@app.on_message(filters.command(["image2"], prefixes=[".", "/"]))
-async def generate_from_image(client, message):
-    if not message.reply_to_message or not message.reply_to_message.photo:
-        await message.reply_text("**Please reply to a photo for a response.**")
-        return
-
-    prompt_text = message.command[1] if len(message.command) > 1 else message.reply_to_message.caption or "Describe this image."
-
-    processing_message = await message.reply_text("**Generating response, please wait...**")
-
-    try:
-        img_bytes = await client.download_media(message.reply_to_message, in_memory=True)
-        pil_img = Image.open(io.BytesIO(img_bytes.getbuffer()))
-
-        img_prompt = types.ImagePrompt(image=pil_img)
-        text_prompt = types.TextPrompt(prompt_text)
-
-        response = modelimg.generate_content(contents=[text_prompt, img_prompt])
-        response_text = response.candidates[0].content[0].text if response.candidates else "No response."
-
-        await message.reply_text(response_text)
-
-    except errors.ClientError as e:
-        await message.reply_text(f"**API Error: {e}**")
-    except Exception as e:
-        await message.reply_text("**An error occurred. Please try again.**")
-    finally:
-        await processing_message.delete()
+        await message.reply_text(f"❌ Terjadi kesalahan:\n`{str(e)}`")
 
 
 
