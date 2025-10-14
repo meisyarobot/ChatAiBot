@@ -720,14 +720,14 @@ async def youtube_downloader(client, message):
         return await message.reply_text("❌ Berikan judul atau link YouTube.\nContoh: `/yt bernadya untungnya hidup`")
     query = " ".join(message.command[1:])
     await message.reply_text("🔍 Sedang mencari...")
-    search_url = f"https://api.botcahx.eu.org/api/search/ytsearch?query={query}&apikey={API_KEY}"
+    search_url = f"https://api.botcahx.eu.org/api/search/ytsearch?query={query}&apikey={BOTCAHX_API_KEY}"
     search_res = requests.get(search_url).json()
 
     if not search_res.get("status"):
         return await message.reply_text("❌ Tidak ditemukan hasil untuk pencarian itu.")
     video = search_res["result"][0]
     video_url = video["url"]
-    info_url = f"https://api.botcahx.eu.org/api/dowloader/yt?url={video_url}&apikey={API_KEY}"
+    info_url = f"https://api.botcahx.eu.org/api/dowloader/yt?url={video_url}&apikey={BOTCAHX_API_KEY}"
     info_res = requests.get(info_url).json()
 
     if not info_res.get("status"):
