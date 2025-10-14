@@ -644,6 +644,48 @@ async def generate_image_handler(client: Client, message: Message):
 
 
 
+from pyrogram import Client, filters
+import requests
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+BOTCAHX_API_KEY = os.getenv("BOTCAHX_API_KEY", "nGozZmON")
+
+
+def get_cecan_image(save_path="cecan.jpg"):
+    url = f"https://api.botcahx.eu.org/api/cecan/indonesia?apikey={BOTCAHX_API_KEY}"
+    try:
+        response = requests.get(url, timeout=10)
+        if response.status_code == 200:
+            with open(save_path, "wb") as f:
+                f.write(response.content)
+            return save_path
+        else:
+            print(f"❌ Gagal akses API: {response.status_code}")
+            return None
+    except Exception as e:
+        print(f"⚠️ Kesalahan koneksi: {e}")
+        return None
+
+@app.on_message(filters.command(["image2"], prefixes=[".", "/"]))
+async def cecan_handler(client, message):
+    loading = await message.reply_text("📸 Sedang mencari cecan Indonesia...")
+
+    image_path = get_cecan_image()
+    if image_path:
+        await client.send_photo(
+            chat_id=message.chat.id,
+            photo=image_path,
+            caption="✨ Nih cecan Indonesia-nya!"
+        )
+        os.remove(image_path)
+    else:
+        await message.reply_text("❌ Gagal mendapatkan gambar dari API.")
+
+    await loading.delete()
+    
+
 # # # # #   A I  C H A T   B O T   # # # # #
 
 
