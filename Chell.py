@@ -714,42 +714,95 @@ async def cecan_handler(client, message):
 
 
 
+import os
+import asyncio
+from yt_dlp import YoutubeDL
+from pyrogram import Client, filters
+from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery
+from youtubesearchpython import VideosSearch
+
+COOKIES_FILE = "cookies.txt"
+DOWNLOAD_DIR = "downloads"
+os.makedirs(DOWNLOAD_DIR, exist_ok=True)
+
+
 @app.on_message(filters.command(["yt"], prefixes=[".", "/"]))
-async def youtube_downloader(client, message):
+async def dl_command(client, message):
     if len(message.command) < 2:
-        return await message.reply_text("❌ Berikan judul atau link YouTube.\nContoh: `/yt bernadya untungnya hidup`")
+        return await message.reply_text("❌ Contoh:\n`.dl bernadya untungnya hidup harus tetap berjalan`")
+
     query = " ".join(message.command[1:])
-    await message.reply_text("🔍 Sedang mencari...")
-    search_url = f"https://api.botcahx.eu.org/api/search/ytsearch?query={query}&apikey={BOTCAHX_API_KEY}"
-    search_res = requests.get(search_url).json()
+    msg = await message.reply_text(f"🔍 Mencari video untuk: `{query}`")
 
-    if not search_res.get("status"):
-        return await message.reply_text("❌ Tidak ditemukan hasil untuk pencarian itu.")
-    video = search_res["result"][0]
-    video_url = video["url"]
-    info_url = f"https://api.botcahx.eu.org/api/dowloader/yt?url={video_url}&apikey={BOTCAHX_API_KEY}"
-    info_res = requests.get(info_url).json()
+    try:
+        search = VideosSearch(query, limit=1)
+        result = search.result()["result"]
+        if not result:
+            return await msg.edit_text("❌ Tidak ditemukan hasil untuk pencarian itu.")
 
-    if not info_res.get("status"):
-        return await message.reply_text("❌ Gagal mengambil data video.")
+        video = result[0]
+        title = video["title"]
+        url = video["link"]
+        thumb = video["thumbnails"][0]["url"]
+        duration = video.get("duration", "N/A")
+        buttons = [
+            [
+                InlineKeyboardButton("🎧 MP3", callback_data=f"dl|mp3|{url}"),
+                InlineKeyboardButton("🎥 MP4", callback_data=f"dl|mp4|{url}")
+            ]
+        ]
+        await msg.edit_text(
+            f"🎬 **{title}**\n🕒 Durasi: `{duration}`\n\nPilih format yang ingin kamu download:",
+            reply_markup=InlineKeyboardMarkup(buttons)
+        )
 
-    result = info_res["result"]
-    title = result.get("title", "Tanpa Judul")
-    thumb = result.get("thumb")
-    mp3 = result.get("mp3")
-    mp4 = result.get("mp4")
-    buttons = [
-        [InlineKeyboardButton("🎧 Download MP3", url=mp3)],
-        [InlineKeyboardButton("🎥 Download MP4", url=mp4)],
-        [InlineKeyboardButton("🌐 Lihat di YouTube", url=video_url)]
-    ]
-    reply_markup = InlineKeyboardMarkup(buttons)
+    except Exception as e:
+        await msg.edit_text(f"❌ Terjadi kesalahan:\n`{e}`")
 
-    await message.reply_photo(
-        photo=thumb,
-        caption=f"🎵 **{title}**\n\n✅ Sumber: [YouTube]({video_url})",
-        reply_markup=reply_markup
-    )
+
+@app.on_callback_query(filters.regex(r"^dl\|(mp3|mp4)\|"))
+async def download_format(client, callback_query: CallbackQuery):
+    fmt, url = callback_query.data.split("|")[1:]
+    user = callback_query.from_user
+    msg = await callback_query.message.edit_text("⏳ Sedang menyiapkan unduhan...")
+
+    try:
+        ydl_opts = {
+            "cookiefile": COOKIES_FILE,
+            "outtmpl": f"{DOWNLOAD_DIR}/%(title)s.%(ext)s",
+            "quiet": True,
+            "noplaylist": True,
+        }
+        if fmt == "mp3":
+            ydl_opts["format"] = "bestaudio/best"
+            ydl_opts["postprocessors"] = [{
+                "key": "FFmpegExtractAudio",
+                "preferredcodec": "mp3",
+                "preferredquality": "192",
+            }]
+        else:
+            ydl_opts["format"] = "best[ext=mp4]/best"
+            ydl_opts["merge_output_format"] = "mp4"
+        with YoutubeDL(ydl_opts) as ydl:
+            info = ydl.extract_info(url, download=True)
+            file_path = ydl.prepare_filename(info)
+            if fmt == "mp3":
+                file_path = os.path.splitext(file_path)[0] + ".mp3"
+
+        title = info.get("title", "Tanpa Judul")
+        caption = f"✅ **{title}**\n🎧 Format: `{fmt.upper()}`"
+        if fmt == "mp3":
+            await client.send_audio(chat_id=callback_query.message.chat.id, audio=file_path, caption=caption)
+        else:
+            await client.send_video(chat_id=callback_query.message.chat.id, video=file_path, caption=caption)
+        os.remove(file_path)
+        await msg.delete()
+
+    except Exception as e:
+        await msg.edit_text(f"❌ Gagal mengunduh:\n`{e}`")
+
+
+
 
 # # # # #   A I  C H A T   B O T   # # # # #
 
