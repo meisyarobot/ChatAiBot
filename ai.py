@@ -24,9 +24,7 @@ def generate_image(prompt: str, output_filename: str):
     for idx, generated_image in enumerate(response.generated_images, start=1):
         image_bytes = generated_image.image.image_bytes
         image = Image.open(BytesIO(image_bytes))
-        image.save(output_filename)
-        return output_filename
-                image.save(cached_file)
+        image.save(cached_file)
                 return cached_file
     except Exception as e:
         print("Error generating image:", e)
