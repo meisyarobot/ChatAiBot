@@ -653,35 +653,61 @@ load_dotenv()
 BOTCAHX_API_KEY = os.getenv("BOTCAHX_API_KEY", "nGozZmON")
 
 
-def get_cecan_image(save_path="cecan.jpg"):
-    url = f"https://api.botcahx.eu.org/api/cecan/indonesia?apikey={BOTCAHX_API_KEY}"
+CECAN_ENDPOINTS = {
+    "indo": "indonesia",
+    "indonesia": "indonesia",
+    "china": "china",
+    "japan": "japan",
+    "vietnam": "vietnam",
+}
+
+def get_cecan_image(country: str, save_path="cecan.jpg"):
+    if country not in CECAN_ENDPOINTS:
+        print(f"⚠️ Negara '{country}' tidak dikenal.")
+        return None
+
+    url = f"https://api.botcahx.eu.org/api/cecan/{CECAN_ENDPOINTS[country]}?apikey={BOTCAHX_API_KEY}"
     try:
         response = requests.get(url, timeout=10)
         if response.status_code == 200:
             with open(save_path, "wb") as f:
                 f.write(response.content)
+            print(f"✅ Gambar dari {country} disimpan di {save_path}")
             return save_path
         else:
-            print(f"❌ Gagal akses API: {response.status_code}")
+            print(f"❌ Gagal akses API ({country}): {response.status_code}")
             return None
     except Exception as e:
-        print(f"⚠️ Kesalahan koneksi: {e}")
+        print(f"❌ Error koneksi: {e}")
         return None
 
-@app.on_message(filters.command(["image2"], prefixes=[".", "/"]))
-async def cecan_handler(client, message):
-    loading = await message.reply_text("📸 Sedang mencari cecan Indonesia...")
 
-    image_path = get_cecan_image()
+@app.on_message(filters.command(["cecan"], prefixes=[".", "/"]))
+async def cecan_handler(client, message):
+    args = message.text.split(maxsplit=1)
+    if len(args) < 2:
+        await message.reply_text(
+            "⚠️ Gunakan format:\n"
+            "`.cecan indo`\n"
+            "`.cecan china`\n"
+            "`.cecan japan`\n"
+            "`.cecan vietnam`"
+        )
+        return
+
+    country = args[1].lower().strip()
+    loading = await message.reply_text(f"📸 Mengambil cecan dari **{country}**...")
+
+    image_path = get_cecan_image(country)
     if image_path:
         await client.send_photo(
             chat_id=message.chat.id,
             photo=image_path,
-            caption="✨ Nih cecan Indonesia-nya!"
+            caption=f"✨ Nih cecan dari **{country.title()}** 😍"
         )
         os.remove(image_path)
     else:
-        await message.reply_text("❌ Gagal mendapatkan gambar dari API.")
+        await message.reply_text(f"❌ Gagal mendapatkan cecan dari **{country}** 😢")
 
     await loading.delete()
     
