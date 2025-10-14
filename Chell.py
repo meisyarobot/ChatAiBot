@@ -16,6 +16,7 @@ from pyrogram.errors import (
     ChannelPrivate, ChatWriteForbidden, FloodWait,
     Forbidden, SlowmodeWait, UserBannedInChannel, PeerIdInvalid
 )
+from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 from pyrogram.enums import ChatType
 from pyrogram.types import Message
 import google.generativeai as genai
@@ -710,7 +711,45 @@ async def cecan_handler(client, message):
         await message.reply_text(f"❌ Gagal mendapatkan cecan dari **{country}** 😢")
 
     await loading.delete()
-    
+
+
+
+@app.on_message(filters.command(["yt"], prefixes=[".", "/"]))
+async def youtube_downloader(client, message):
+    if len(message.command) < 2:
+        return await message.reply_text("❌ Berikan judul atau link YouTube.\nContoh: `/yt bernadya untungnya hidup`")
+    query = " ".join(message.command[1:])
+    await message.reply_text("🔍 Sedang mencari...")
+    search_url = f"https://api.botcahx.eu.org/api/search/ytsearch?query={query}&apikey={API_KEY}"
+    search_res = requests.get(search_url).json()
+
+    if not search_res.get("status"):
+        return await message.reply_text("❌ Tidak ditemukan hasil untuk pencarian itu.")
+    video = search_res["result"][0]
+    video_url = video["url"]
+    info_url = f"https://api.botcahx.eu.org/api/dowloader/yt?url={video_url}&apikey={API_KEY}"
+    info_res = requests.get(info_url).json()
+
+    if not info_res.get("status"):
+        return await message.reply_text("❌ Gagal mengambil data video.")
+
+    result = info_res["result"]
+    title = result.get("title", "Tanpa Judul")
+    thumb = result.get("thumb")
+    mp3 = result.get("mp3")
+    mp4 = result.get("mp4")
+    buttons = [
+        [InlineKeyboardButton("🎧 Download MP3", url=mp3)],
+        [InlineKeyboardButton("🎥 Download MP4", url=mp4)],
+        [InlineKeyboardButton("🌐 Lihat di YouTube", url=video_url)]
+    ]
+    reply_markup = InlineKeyboardMarkup(buttons)
+
+    await message.reply_photo(
+        photo=thumb,
+        caption=f"🎵 **{title}**\n\n✅ Sumber: [YouTube]({video_url})",
+        reply_markup=reply_markup
+    )
 
 # # # # #   A I  C H A T   B O T   # # # # #
 
