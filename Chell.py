@@ -590,22 +590,24 @@ async def list_group_blacklist(client, message):
 
 
 from ai import generate_image
+from io import BytesIO
+from PIL import Image
 
 @app.on_message(filters.command(["image"], prefixes=[".", "/"]))
-async def image_command(client, message):
+async def image_command(client_app, message):
     if len(message.command) < 2:
         await message.reply_text("❌ Silakan masukkan prompt. Contoh:\n/image kucing lucu")
         return
-    
     prompt = " ".join(message.command[1:])
-    msg = await message.reply_text("🖌️ Membuat gambar...")
+    msg = await message.reply_text("🖌️ Membuat gambar dengan Gemini...")
     
     image_path = generate_image(prompt)
     if image_path:
         await message.reply_photo(image_path, caption=f"Prompt: {prompt}")
         await msg.delete()
     else:
-        await msg.edit("❌ Gagal membuat gambar.")
+        await msg.edit("❌ Gagal membuat gambar. Periksa API Key dan koneksi.")
+
 
 
 
