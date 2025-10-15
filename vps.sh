@@ -4,7 +4,7 @@
 #  by BoysChell | t.me/boyschell
 # ==========================================
 
-BOT_NAME="AutoChatBot"
+BOT_NAME="AiBot"
 PYTHON_VERSION="python3"
 VENV_DIR="venv"
 REQUIREMENTS="requirements.txt"
@@ -17,8 +17,11 @@ echo "🚀 Starting $BOT_NAME (VPS MODE)"
 echo "====================================="
 
 echo "✅ Memeriksa prasyarat sistem..."
+echo " Create By : @boyschell @memekcode"
 sudo apt update -y >/dev/null 2>&1
 sudo apt install ffmpeg -y
+
+clear
 
 if ! command -v $PYTHON_VERSION &> /dev/null; then
     echo "❌ Python3 belum terpasang. Menginstal..."
@@ -34,6 +37,8 @@ if ! command -v git &> /dev/null; then
     echo "🧰 Menginstal git..."
     sudo apt install git -y
 fi
+
+clear
 
 echo "📦 Memperbarui pip..."
 $PYTHON_VERSION -m pip install -U pip wheel setuptools >/dev/null 2>&1
@@ -73,13 +78,18 @@ if screen -list | grep -q "$SCREEN_NAME"; then
     screen -S "$SCREEN_NAME" -X quit || screen -X -S "$SCREEN_NAME" quit
 fi
 
+clear
+
+echo " RUNNING AIBOT by @BoysChell"
 echo "🖥️ Menjalankan bot di screen: $SCREEN_NAME"
 
 screen -dmS "$SCREEN_NAME" bash -c "
     source $VENV_ACTIVATE
     exec $PYTHON_VERSION $MAIN_FILE
 "
+clear
 
+echo " BOT AI By : @boyschell Telah Berjalan"
 echo "✅ Bot telah berjalan di background!"
 echo "💬 Untuk melihat log, gunakan:"
 echo "    screen -r $SCREEN_NAME"
