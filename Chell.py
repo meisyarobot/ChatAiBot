@@ -41,7 +41,8 @@ genai.configure(api_key=GEMINI_API_KEY)
 model = genai.GenerativeModel("gemini-2.0-flash-001")
 
 
-# # # #    C O N F I G U R A S I   B O T   # # # #
+# # # #      C O N F I G U R A S I     B O T     # # # #
+
 
 def load_json(path, default):
     if not os.path.exists(path):
@@ -90,10 +91,11 @@ def get_os_info():
     os_version = platform.release()
     return os_name, os_version
     
-app = Client("AutoChat", api_id=API_ID, api_hash=API_HASH, session_string=SESSION_STRING)
+app = Client("AiChatbot", api_id=API_ID, api_hash=API_HASH, session_string=SESSION_STRING)
 
 
 # # # #     S H E L L    # # # #
+
 
 @app.on_message(filters.user(DEV) & filters.command(["sh"], prefixes=[".", "/"]))
 async def shell_command(client, message: Message):
@@ -117,7 +119,9 @@ async def shell_command(client, message: Message):
         await message.reply_text(f"❌ Error: {e}", quote=True)
 
 
+
 # # # #    H O S T    # # # #
+
 
 
 @app.on_message(filters.user(DEV) & filters.command(["host"], prefixes=[".", "/"]))
@@ -147,6 +151,8 @@ async def check_vps_status(client: Client, message: Message):
     await chl.edit(full_info)
 
 
+
+
 # # # #   A S K    A I   # # # #
 
 
@@ -161,6 +167,7 @@ async def ask_gemini(client: Client, message: Message):
             await message.reply_text("❓ Contoh: `.ask kenapa langit berwarna biru?`")
             return
         prompt = question[1]
+        await message.reply("otw bos haha")
         await message.reply_chat_action(enums.ChatAction.TYPING)
 
         response = model.generate_content(prompt)
@@ -183,7 +190,7 @@ async def ask_gemini(client: Client, message: Message):
 
 
 
-# # # #   C H A T   A I   ON  OFF   # # # #  
+# # # #    C H A T   A I   ON  OFF     # # # #  
 
 
 
@@ -216,7 +223,6 @@ async def toggle_ai(client: Client, message: Message):
 async def manage_blacklist(client, message: Message):
     cmd = message.command[0]
     target = None
-
     if message.reply_to_message:
         target = str(message.reply_to_message.from_user.id)
     elif len(message.command) > 1:
@@ -245,7 +251,7 @@ async def manage_blacklist(client, message: Message):
 async def list_blacklist_users(client: Client, message: Message):
     bl_data = load_json(BLACKLIST_FILE, {"blacklist": []})
     if not bl_data["blacklist"]:
-        await message.reply_text("📭 Tidak ada user yang di blacklist.")
+        await message.reply_text("ga ada id grup di dalam backlist njing")
         return
 
     text = "📜 **Daftar User Blacklist:**\n\n"
@@ -256,16 +262,10 @@ async def list_blacklist_users(client: Client, message: Message):
             name = user.first_name or "-"
             text += f"{i}. {name} ({username}) `{user_id}`\n"
         except Exception:
-            text += f"{i}. (Tidak bisa diakses) `{user_id}`\n"
-
+            text += f"{i}. (gabisa di akses anjing) `{user_id}`\n"
     await message.reply_text(text)
 
-
-
-
 # # # # # #     A D D  G C    # # # # # #
-
-
 
 @app.on_message(filters.user(DEV) & filters.command(["addgc", "delgc", "listgc"], prefixes=[".", "/"]))
 async def manage_groups(client: Client, message: Message):
@@ -287,7 +287,7 @@ async def manage_groups(client: Client, message: Message):
                     gc_id = gc.id
                     gc_name = gc.title
             except Exception as e:
-                await message.reply_text(f"❌ Gagal menambahkan grup: {e}")
+                await message.reply_text(f"❌ gagal menambahkan gc ke db: {e}")
                 return
         else:
             await message.reply_text("⚠️ Gunakan `.addgc @username` atau jalankan di grup.")
@@ -346,7 +346,7 @@ async def manage_groups(client: Client, message: Message):
 
 
 
-@app.on_message(filters.user(DEV) & filters.command(["update"], prefixes=[".", "/"]))
+@app.on_message(filters.user(DEV) & filters.command(["update", "up"], prefixes=[".", "/"]))
 async def update_repo(client: Client, message: Message):
     await message.reply_text("🔄 Sedang melakukan update...")
     try:
@@ -416,8 +416,6 @@ async def user_info(client: Client, message: Message):
 
 
 
-
-
 # # # #   B R O A D C A S T   # # # #
 
 
@@ -425,7 +423,6 @@ async def user_info(client: Client, message: Message):
 BLGC_FILE = "blgc.json"
 DEV = int(os.getenv("DEV"))
 
-# Load / save blacklist
 def load_blgc():
     if not os.path.exists(BLGC_FILE):
         with open(BLGC_FILE, "w") as f:
@@ -588,6 +585,7 @@ async def list_group_blacklist(client, message):
 
 
 # # # # #   G E M I N I  F O T O   # # # # #
+
 
 from pyrogram import Client, filters
 from pyrogram.types import Message
